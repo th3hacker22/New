@@ -1,0 +1,6 @@
+{
+  "name": "ReLift",
+  "description": "Pulse Fitness PWA - Next-gen workout tracker.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
