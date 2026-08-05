@@ -20,8 +20,8 @@ import {
   type ProgressPhoto,
 } from "@/db";
 import { useExerciseStore } from "@/store/useExerciseStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
 import { useWorkoutStore } from "@/store/useWorkoutStore";
+import { useTranslation } from "@/i18n";
 import statsAnalyticsImg from "@/assets/images/stats_analytics_illustration_new_1784773571138.jpg";
 
 // Refactored tabs
@@ -34,8 +34,7 @@ import HistoryTab from "@/components/stats/tabs/HistoryTab";
 export default function StatsPage() {
   const navigate = useNavigate();
   const { exercises, loadExercises } = useExerciseStore();
-  const { language } = useSettingsStore();
-  const isAr = language === "ar";
+  const { t: tI18n, isAr } = useTranslation();
   const { isDemoMode, setDemoMode } = useWorkoutStore();
 
   const [activeTab, setActiveTab] = useState<"overview" | "exercises" | "measurements" | "photos" | "history">("overview");
@@ -66,10 +65,10 @@ export default function StatsPage() {
   const [afterPhotoId, setAfterPhotoId] = useState<string>("");
 
   const t = {
-    overview: isAr ? "نظرة سريعة" : "Overview",
-    exercises: isAr ? "تمرينات" : "Exercises",
-    measurements: isAr ? "القياسات" : "Measurements",
-    photos: isAr ? "صور" : "Photos",
+    overview: tI18n('stats.overview'),
+    exercises: tI18n('stats.exercises'),
+    measurements: tI18n('stats.measurements'),
+    photos: tI18n('stats.photos'),
   };
 
   const getCategory = (ex: any): string => {
@@ -189,7 +188,7 @@ export default function StatsPage() {
   }
 
   async function deletePhoto(id: string) {
-    if (!confirm(isAr ? "متأكد إنك عايز تمسح الصورة دي؟" : "Delete this photo?")) return;
+    if (!confirm(tI18n('stats.delete_photo_confirm'))) return;
     await db.progressPhotos.delete(id);
     loadMeasurementsAndPhotos();
   }
@@ -199,9 +198,9 @@ export default function StatsPage() {
       <div className="relative w-full h-32 md:h-40 rounded-2xl overflow-hidden border border-border/60 shadow-xl group">
         <img src={statsAnalyticsImg} alt="Analytics" referrerPolicy="no-referrer" className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700" />
         <div className="absolute inset-0 bg-gradient-to-r from-bg-surface/90 via-bg-surface/60 to-transparent flex flex-col justify-center p-5">
-          <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/20 border border-primary/30 px-2.5 py-0.5 rounded-md self-start mb-1 backdrop-blur-md">{isAr ? "تحليلات متقدمة 3D" : "3D ANALYTICS ENGINE"}</span>
-          <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-text-primary">{isAr ? "إحصائيات الأداء والتطور" : "Performance & Growth Stats"}</h1>
-          <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md">{isAr ? "تتبع الأحمال، حجم التمارين، وتوزيع الاستشفاء بدقة عالية" : "Track volume, personal records, and recovery balance in real-time"}</p>
+          <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/20 border border-primary/30 px-2.5 py-0.5 rounded-md self-start mb-1 backdrop-blur-md">{tI18n('stats.advanced3d')}</span>
+          <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-text-primary">{tI18n('stats.performanceTitle')}</h1>
+          <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md">{tI18n('stats.performanceDesc')}</p>
         </div>
       </div>
 
@@ -209,7 +208,7 @@ export default function StatsPage() {
         <div className="flex items-center gap-1.5 p-1 bg-bg-surface/80 backdrop-blur-md rounded-2xl border border-border/50 overflow-x-auto no-scrollbar shadow-inner">
           {[
             { id: "overview", label: t.overview, icon: Activity },
-            { id: "history", label: isAr ? "السجل ⏱️" : "History ⏱️", icon: Clock },
+            { id: "history", label: tI18n('stats.history') + " ⏱️", icon: Clock },
             { id: "exercises", label: t.exercises, icon: Dumbbell },
             { id: "measurements", label: t.measurements, icon: Scale },
             { id: "photos", label: t.photos, icon: Camera },
@@ -226,7 +225,7 @@ export default function StatsPage() {
         </div>
         <div className="flex items-center gap-2.5 p-1.5 px-3 bg-bg-surface/80 backdrop-blur-md rounded-2xl border border-border/50 shadow-sm">
           <Sparkles size={14} className={cn("transition-colors", isDemoMode ? "text-primary animate-pulse" : "text-text-muted")} />
-          <span className="text-xs font-black text-text-primary select-none">{isAr ? "وضع المعاينة التجريبي" : "Preview Demo Mode"}</span>
+          <span className="text-xs font-black text-text-primary select-none">{tI18n('stats.demoMode')}</span>
           <button id="demo-mode-toggle" onClick={() => { setDemoMode(!isDemoMode); if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([15, 15]); }} className={cn("relative w-9 h-5 rounded-full transition-colors duration-300 outline-none cursor-pointer focus:ring-1 focus:ring-primary/40 flex items-center", isDemoMode ? "bg-primary" : "bg-neutral-800")} aria-label="Toggle demo mode">
             <motion.div layout className={cn("absolute w-4 h-4 rounded-full shadow-md", isDemoMode ? "bg-bg-surface" : "bg-text-muted")} initial={false} animate={{ x: isDemoMode ? 16 : 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }} />
           </button>
