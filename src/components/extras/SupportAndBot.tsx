@@ -1,3 +1,4 @@
+import { storage } from "@/lib/storage";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -71,7 +72,7 @@ export default function SupportAndBot({ isOpen, onClose }: SupportAndBotProps) {
 
   // Load bug reports from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("pulse_bug_reports");
+    const saved = storage.getString("pulse_bug_reports" as any, "");
     if (saved) {
       try {
         setBugReports(JSON.parse(saved));
@@ -84,7 +85,7 @@ export default function SupportAndBot({ isOpen, onClose }: SupportAndBotProps) {
   // Save bug reports
   const saveBugReports = (list: BugReport[]) => {
     setBugReports(list);
-    localStorage.setItem("pulse_bug_reports", JSON.stringify(list));
+    storage.set("pulse_bug_reports" as any, JSON.stringify(list as any));
   };
 
   // Scroll chat to bottom

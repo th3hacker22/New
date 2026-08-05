@@ -2,9 +2,15 @@ import Dexie, { type Table } from "dexie";
 import type { Exercise } from "@/types/exercise";
 import { uid } from "@/utils/id";
 
+// ── Import analytics helpers ──
+import { calculateSessionVolume, getWeekKey as getWeekKeyInternal, getWorkoutStreak as getStreakNew, getWeeklyVolumeData } from "./analytics";
+export { calculateSessionVolume, getWeeklyVolumeData };
+export const getWeekKey = getWeekKeyInternal;
+export const getWorkoutStreak = getStreakNew;
+
 // ── Workout Types ──
 export interface WorkoutSession {
-  id: string; // Changed from id?: number
+  id: string;
   name: string;
   date: string;
   duration: number;
@@ -34,24 +40,22 @@ export interface ExerciseSetData {
   setType?: string;
 }
 
-// ── Body Measurement Types ──
 export interface BodyMeasurement {
-  id: string; // Changed from id?: number
+  id: string;
   date: string;
-  weight?: number; // kg
-  bodyFat?: number; // percentage
-  waist?: number; // cm
-  chest?: number; // cm
-  arms?: number; // cm
+  weight?: number;
+  bodyFat?: number;
+  waist?: number;
+  chest?: number;
+  arms?: number;
   notes?: string;
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
 }
 
-// ── Progress Photo Types (Blob stored in IndexedDB) ──
 export interface ProgressPhoto {
-  id: string; // Changed from id?: number
+  id: string;
   date: string;
   type: "front" | "side" | "back";
   imageBlob: Blob;
@@ -62,9 +66,8 @@ export interface ProgressPhoto {
   deleted?: boolean;
 }
 
-// ── User Profile ──
 export interface UserProfile {
-  id: string; // Changed from id?: number
+  id: string;
   name: string;
   weight?: number;
   height?: number;
@@ -74,7 +77,6 @@ export interface UserProfile {
   deleted?: boolean;
 }
 
-// ── Routine Types ──
 export interface RoutineExercise {
   exerciseId: string | number;
   exerciseName: string;
@@ -88,7 +90,7 @@ export interface RoutineExercise {
 }
 
 export interface Routine {
-  id: string; // Changed from id?: number
+  id: string;
   name: string;
   exercises: RoutineExercise[];
   createdAt: string;
@@ -127,7 +129,6 @@ export interface UnlockedAchievement {
   deleted?: boolean;
 }
 
-// ── Database Class ──
 class PulseDB extends Dexie {
   exercises_v2!: Table<Exercise>;
   workoutSessions!: Table<WorkoutSession>;
@@ -138,6 +139,7 @@ class PulseDB extends Dexie {
   foodEntries!: Table<FoodEntry>;
   nutritionGoals!: Table<NutritionGoal>;
   unlockedAchievements!: Table<UnlockedAchievement>;
+  favoriteExercises!: Table<{ id: string }>;
 
   constructor() {
     super("PulseDB");
@@ -166,14 +168,12 @@ class PulseDB extends Dexie {
           const records = await collection.toArray();
           for (const record of records) {
             if (typeof record.id === "number") {
-              // For Dexie, modifying primary key requires delete and add
               await collection.delete(record.id);
               record.id = uid();
               await collection.add(record);
             }
           }
         };
-
         await upgradeCollection("workoutSessions");
         await upgradeCollection("bodyMeasurements");
         await upgradeCollection("progressPhotos");
@@ -218,17 +218,13 @@ class PulseDB extends Dexie {
       favoriteExercises: "id",
     });
   }
-  favoriteExercises!: Table<{ id: string }>;
 }
 
 export const db = new PulseDB();
 
-// Handle schema errors by resetting the local DB
 db.open().catch(async (err) => {
   if (err.name === "UpgradeError") {
-    console.warn(
-      "Database schema change detected. Resetting local database...",
-    );
+    console.warn("Database schema change detected. Resetting local database...");
     await db.delete();
     window.location.reload();
   } else {
@@ -236,73 +232,25 @@ db.open().catch(async (err) => {
   }
 });
 
-// ── Note: Exercises are now loaded from GitHub API via exerciseService.ts ──
-// No more local seeding needed
+// ── Analytics Helpers (Refactored to avoid duplication) ──
 
-// ── Analytics Helpers ──
-
-// Get workout streak (consecutive days)
-export async function getWorkoutStreak(): Promise<number> {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
-
-  if (sessions.length === 0) return 0;
-
-  // Get unique dates (YYYY-MM-DD)
-  const dates = [...new Set(sessions.map((s) => s.date.split("T")[0]))].sort(
-    (a, b) => new Date(b).getTime() - new Date(a).getTime(),
-  );
-
-  if (dates.length === 0) return 0;
-
-  // Check if today or yesterday is in the list
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-
-  if (dates[0] !== today && dates[0] !== yesterday) return 0;
-
-  let streak = 1;
-  for (let i = 1; i < dates.length; i++) {
-    const curr = new Date(dates[i - 1]);
-    const prev = new Date(dates[i]);
-    const diffDays = (curr.getTime() - prev.getTime()) / 86400000;
-
-    if (diffDays === 1) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
+// Wrapper for backward compat - now uses new implementation
+export async function getWorkoutStreakLegacy(): Promise<number> {
+  return getStreakNew();
 }
 
-// Get Personal Records for each exercise
 export async function getPersonalRecords(): Promise<
-  {
-    exerciseId: string | number;
-    exerciseName: string;
-    maxWeight: number;
-    date: string;
-  }[]
+  { exerciseId: string | number; exerciseName: string; maxWeight: number; date: string }[]
 > {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
+  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
 
-  const records: Map<
-    string | number,
-    { exerciseName: string; maxWeight: number; date: string }
-  > = new Map();
+  const records: Map<string | number, { exerciseName: string; maxWeight: number; date: string }> = new Map();
 
   for (const session of sessions) {
     for (const ex of session.exercises) {
-      const maxSetWeight = Math.max(...ex.sets.map((s) => s.weight));
+      if (ex.sets.length === 0) continue;
+      const maxSetWeight = Math.max(...ex.sets.map((s) => s.weight || 0));
       const current = records.get(ex.exerciseId);
-
       if (!current || maxSetWeight > current.maxWeight) {
         records.set(ex.exerciseId, {
           exerciseName: ex.exerciseName,
@@ -319,99 +267,28 @@ export async function getPersonalRecords(): Promise<
   }));
 }
 
-// Get weekly volume (total weight lifted per week)
-export async function getWeeklyVolume(
-  weeks: number = 8,
-): Promise<{ week: string; volume: number }[]> {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
-
-  const weeklyData: Map<string, number> = new Map();
-
-  // Initialize last N weeks
-  for (let i = 0; i < weeks; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - i * 7);
-    const weekKey = getWeekKey(date);
-    weeklyData.set(weekKey, 0);
-  }
-
-  // Sum volumes
-  for (const session of sessions) {
-    const sessionDate = new Date(session.date);
-    const weekKey = getWeekKey(sessionDate);
-
-    if (weeklyData.has(weekKey)) {
-      const volume = session.exercises.reduce((acc, ex) => {
-        return (
-          acc + ex.sets.reduce((setAcc, s) => setAcc + s.weight * s.reps, 0)
-        );
-      }, 0);
-      weeklyData.set(weekKey, (weeklyData.get(weekKey) || 0) + volume);
-    }
-  }
-
-  return Array.from(weeklyData.entries())
-    .map(([week, volume]) => ({ week, volume }))
-    .reverse();
+// Unified weekly volume - single source of truth
+export async function getWeeklyVolume(weeks = 8): Promise<{ week: string; volume: number }[]> {
+  const data = await getWeeklyVolumeData(weeks);
+  return data.map(({ week, volume }) => ({ week, volume }));
 }
 
-// Get weekly tonnage (volume)
-export async function getWeeklyTonnage(
-  weeks: number = 4,
-): Promise<{ week: string; tonnage: number }[]> {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
-
-  const weeklyData: Map<string, number> = new Map();
-
-  for (let i = 0; i < weeks; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - i * 7);
-    const weekKey = getWeekKey(date);
-    weeklyData.set(weekKey, 0);
-  }
-
-  for (const session of sessions) {
-    const sessionDate = new Date(session.date);
-    const weekKey = getWeekKey(sessionDate);
-
-    if (weeklyData.has(weekKey)) {
-      const volume = session.exercises.reduce((acc, ex) => {
-        return (
-          acc + ex.sets.reduce((setAcc, s) => setAcc + s.weight * s.reps, 0)
-        );
-      }, 0);
-      weeklyData.set(weekKey, (weeklyData.get(weekKey) || 0) + volume);
-    }
-  }
-
-  return Array.from(weeklyData.entries())
-    .map(([week, tonnage]) => ({ week, tonnage }))
-    .reverse();
+export async function getWeeklyTonnage(weeks = 4): Promise<{ week: string; tonnage: number }[]> {
+  const data = await getWeeklyVolumeData(weeks);
+  return data.map(({ week, tonnage }) => ({ week, tonnage }));
 }
 
-// Get exercise progress over time
 export async function getExerciseProgress(
   exerciseId: string | number,
 ): Promise<{ date: string; maxWeight: number }[]> {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
+  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
 
   const progress: { date: string; maxWeight: number }[] = [];
 
   for (const session of sessions) {
-    const ex = session.exercises.find(
-      (e) => String(e.exerciseId) === String(exerciseId),
-    );
+    const ex = session.exercises.find((e) => String(e.exerciseId) === String(exerciseId));
     if (ex && ex.sets.length > 0) {
-      const maxWeight = Math.max(...ex.sets.map((s) => s.weight));
+      const maxWeight = Math.max(...ex.sets.map((s) => s.weight || 0));
       progress.push({
         date: session.date.split("T")[0],
         maxWeight,
@@ -419,31 +296,24 @@ export async function getExerciseProgress(
     }
   }
 
-  return progress.sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  );
+  return progress.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
-// Get estimated 1RM progress for an exercise
 export async function getEstimated1RM(
   exerciseId: string | number,
 ): Promise<{ date: string; e1rm: number }[]> {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
+  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
 
   const progress: { date: string; e1rm: number }[] = [];
 
   for (const session of sessions) {
-    const ex = session.exercises.find(
-      (e) => String(e.exerciseId) === String(exerciseId),
-    );
+    const ex = session.exercises.find((e) => String(e.exerciseId) === String(exerciseId));
     if (ex && ex.sets.length > 0) {
       const bestE1rm = Math.max(
         ...ex.sets
           .filter((s) => s.completed)
           .map((s) => s.weight * (1 + s.reps / 30)),
+        0
       );
       if (bestE1rm > 0) {
         progress.push({
@@ -454,28 +324,19 @@ export async function getEstimated1RM(
     }
   }
 
-  return progress.sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  );
+  return progress.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
-// Get muscle groups volume breakdown
 export async function getMuscleGroupStats(
   exercises: Exercise[],
 ): Promise<{ muscle: string; volume: number }[]> {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
+  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
 
-  const muscleData: Map<string, number> = new Map();
+  const muscleData = new Map<string, number>();
 
   for (const session of sessions) {
     for (const ex of session.exercises) {
-      // Find exercise details to get muscle group or use stored muscleGroup
-      const exerciseDef = exercises.find(
-        (e) => String(e.id) === String(ex.exerciseId),
-      );
+      const exerciseDef = exercises.find((e) => String(e.id) === String(ex.exerciseId));
       const muscle = ex.muscleGroup || exerciseDef?.muscleGroup;
       if (!muscle) continue;
 
@@ -492,28 +353,23 @@ export async function getMuscleGroupStats(
     .sort((a, b) => b.volume - a.volume);
 }
 
-// Get weekly sets per muscle group for volume tracking
 export async function getWeeklySetVolume(
   exercises: Exercise[],
 ): Promise<{ muscle: string; sets: number }[]> {
   const now = new Date();
   const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+  startOfWeek.setDate(now.getDate() - now.getDay());
   startOfWeek.setHours(0, 0, 0, 0);
 
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .filter((s) => new Date(s.date) >= startOfWeek)
-    .toArray();
+  // Use where completed = true then filter by date - consistent with other queries
+  const allSessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = allSessions.filter((s) => new Date(s.date) >= startOfWeek);
 
-  const muscleSets: Map<string, number> = new Map();
+  const muscleSets = new Map<string, number>();
 
   for (const session of sessions) {
     for (const ex of session.exercises) {
-      const exerciseDef = exercises.find(
-        (e) => String(e.id) === String(ex.exerciseId),
-      );
+      const exerciseDef = exercises.find((e) => String(e.id) === String(ex.exerciseId));
       const muscle = ex.muscleGroup || exerciseDef?.muscleGroup;
       if (!muscle) continue;
 
@@ -527,14 +383,10 @@ export async function getWeeklySetVolume(
     .sort((a, b) => b.sets - a.sets);
 }
 
-// Get workout density (workouts per day) for heatmap
 export async function getWorkoutDensity(): Promise<{ date: string; count: number }[]> {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
+  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
 
-  const densityMap: Map<string, number> = new Map();
+  const densityMap = new Map<string, number>();
 
   for (const session of sessions) {
     const date = session.date.split("T")[0];
@@ -547,44 +399,26 @@ export async function getWorkoutDensity(): Promise<{ date: string; count: number
   }));
 }
 
-// Get total stats
 export async function getTotalStats() {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
+  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
 
   const validSessions = sessions.filter((s) => !s.isFreeze);
 
   const totalWorkouts = validSessions.length;
-  const totalVolume = validSessions.reduce((acc, s) => {
-    return (
-      acc +
-      s.exercises.reduce((exAcc, ex) => {
-        return (
-          exAcc +
-          ex.sets.reduce((setAcc, set) => setAcc + set.weight * set.reps, 0)
-        );
-      }, 0)
-    );
-  }, 0);
+  const totalVolume = validSessions.reduce((acc, s) => acc + calculateSessionVolume(s), 0);
   const totalDuration = validSessions.reduce((acc, s) => acc + s.duration, 0);
 
   return { totalWorkouts, totalVolume, totalDuration };
 }
 
-// Get history for a specific exercise
 export async function getExerciseHistory(exerciseId: string) {
-  const sessions = await db.workoutSessions
-    .where("completed")
-    .equals(1)
-    .toArray();
+  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
 
   const history = sessions
     .filter((s) => s.exercises.some((ex) => String(ex.exerciseId) === String(exerciseId)))
     .map((s) => {
       const exercise = s.exercises.find((ex) => String(ex.exerciseId) === String(exerciseId))!;
-      const totalVolume = exercise.sets.reduce((acc, set) => acc + (set.weight * set.reps), 0);
+      const totalVolume = exercise.sets.reduce((acc, set) => acc + set.weight * set.reps, 0);
       const maxWeight = Math.max(...exercise.sets.map((s) => s.weight), 0);
       const bestSet = exercise.sets.reduce(
         (best, current) => (current.weight * current.reps > best.weight * best.reps ? current : best),
@@ -601,12 +435,4 @@ export async function getExerciseHistory(exerciseId: string) {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return history;
-}
-
-// Helper: Get week key (e.g., "W1", "W2")
-function getWeekKey(date: Date): string {
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const days = Math.floor((date.getTime() - startOfYear.getTime()) / 86400000);
-  const weekNum = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-  return `W${weekNum}`;
 }

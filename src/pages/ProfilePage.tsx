@@ -20,7 +20,8 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useSocialStore } from "@/store/useSocialStore";
 import { signOut, updateProfile, User as FirebaseUser } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth, storage } from "@/lib/firebase";
+import { auth, storage as firebaseStorage } from "@/lib/firebase";
+import { storage as appStorage } from "@/lib/storage";
 import { pushToCloud } from "@/lib/syncEngine";
 import { useAchievementsStore } from "@/store/useAchievementsStore";
 import { ACHIEVEMENTS } from "@/data/achievements";
@@ -67,7 +68,11 @@ export default function ProfilePage() {
   const [achProgressMap, setAchProgressMap] = useState<Record<string, number>>({});
 
   const [avatarEmoji, setAvatarEmoji] = useState(() => {
-    return localStorage.getItem("relift-profile-avatar") || "🏋️‍♂️";
+    try {
+      return appStorage.getString("profile_avatar", "🏋️‍♂️") || "🏋️‍♂️";
+    } catch {
+      return "🏋️‍♂️";
+    }
   });
 
   const emojis = ["🏋️‍♂️", "🏋️‍♀️", "💪", "🏃‍♂️", "🏃‍♀️", "🤸‍♂️", "🤸‍♀️", "🦁", "⚡", "🔥"];
@@ -107,8 +112,6 @@ export default function ProfilePage() {
 
   const handleCycleAvatar = () => {
     if (user?.photoURL) {
-      // If user has a real photo, maybe clicking cycles back to emojis?
-      // Or just opens the file picker.
       fileInputRef.current?.click();
       return;
     }
@@ -116,17 +119,17 @@ export default function ProfilePage() {
     const nextIndex = (currentIndex + 1) % emojis.length;
     const nextEmoji = emojis[nextIndex];
     setAvatarEmoji(nextEmoji);
-    localStorage.setItem("relift-profile-avatar", nextEmoji);
+    appStorage.set("profile_avatar", nextEmoji);
     useToastStore.getState().addToast("success", isAr ? "غيرنا الصورة الرمزية بنجاح! 😎" : "Avatar changed successfully! 😎");
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user || isGuest || !storage) return;
+    if (!file || !user || isGuest || !firebaseStorage) return;
 
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `profiles/${user.uid}/avatar_${Date.now()}`);
+      const storageRef = ref(firebaseStorage, `profiles/${user.uid}/avatar_${Date.now()}`);
       await uploadBytes(storageRef, file);
       const photoURL = await getDownloadURL(storageRef);
       

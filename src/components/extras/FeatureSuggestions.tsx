@@ -1,3 +1,4 @@
+import { storage } from "@/lib/storage";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -91,7 +92,7 @@ export default function FeatureSuggestions({ isOpen, onClose }: FeatureSuggestio
 
   // Load from local storage or pre-populate
   useEffect(() => {
-    const saved = localStorage.getItem("pulse_feature_suggestions");
+    const saved = storage.getString("pulse_feature_suggestions" as any, "");
     if (saved) {
       try {
         setSuggestions(JSON.parse(saved));
@@ -100,13 +101,13 @@ export default function FeatureSuggestions({ isOpen, onClose }: FeatureSuggestio
       }
     } else {
       setSuggestions(INITIAL_SUGGESTIONS);
-      localStorage.setItem("pulse_feature_suggestions", JSON.stringify(INITIAL_SUGGESTIONS));
+      storage.set("pulse_feature_suggestions" as any, JSON.stringify(INITIAL_SUGGESTIONS as any));
     }
   }, []);
 
   const saveSuggestions = (list: Suggestion[]) => {
     setSuggestions(list);
-    localStorage.setItem("pulse_feature_suggestions", JSON.stringify(list));
+    storage.set("pulse_feature_suggestions" as any, JSON.stringify(list as any));
   };
 
   // Handle upvote with toggle animation

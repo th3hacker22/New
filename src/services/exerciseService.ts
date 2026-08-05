@@ -3,78 +3,60 @@ import {
   type Exercise,
   transformExercise,
 } from "@/types/exercise";
+import { storage } from "@/lib/storage";
 
 // ── GitHub Raw URL ──
 const EXERCISES_JSON_URL =
   "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/data/exercises.json";
 
-// ── Cache Key ──
-const CACHE_KEY = "pulse_exercises_cache_v2";
-const CACHE_EXPIRY_KEY = "pulse_exercises_cache_v2_expiry";
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-// ── Fetch all exercises from GitHub ──
+// ── Fetch all exercises from GitHub with deduped caching ──
+let pendingFetch: Promise<Exercise[]> | null = null;
+
 export async function fetchExercisesFromGitHub(): Promise<Exercise[]> {
-  try {
-    // Check cache first
-    const cached = getCachedExercises();
-    if (cached) {
-      console.log("Using cached exercises data");
-      return cached;
+  if (pendingFetch) return pendingFetch;
+
+  pendingFetch = (async () => {
+    try {
+      // Check centralized cache first
+      const cached = storage.getExercisesCache();
+      if (cached) {
+        console.log("Using cached exercises data via storage manager");
+        return cached as Exercise[];
+      }
+
+      console.log("Fetching exercises from GitHub...");
+      const response = await fetch(EXERCISES_JSON_URL);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const rawExercises: ExerciseRaw[] = await response.json();
+      const exercises = rawExercises.map(transformExercise);
+
+      // Cache via centralized manager (quota-safe)
+      storage.setExercisesCache(exercises, CACHE_DURATION);
+
+      console.log(`Loaded ${exercises.length} exercises from GitHub`);
+      return exercises;
+    } catch (error) {
+      console.error("Failed to fetch exercises from GitHub:", error);
+
+      // Fallback to expired cache
+      const fallback = storage.get<Exercise[]>("exercises_cache", [] as any);
+      if (fallback && fallback.length > 0) {
+        return fallback;
+      }
+
+      return [];
+    } finally {
+      pendingFetch = null;
     }
+  })();
 
-    console.log("Fetching exercises from GitHub...");
-    const response = await fetch(EXERCISES_JSON_URL);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const rawExercises: ExerciseRaw[] = await response.json();
-    const exercises = rawExercises.map(transformExercise);
-
-    // Cache the result
-    cacheExercises(exercises);
-
-    console.log(`Loaded ${exercises.length} exercises from GitHub`);
-    return exercises;
-  } catch (error) {
-    console.error("Failed to fetch exercises from GitHub:", error);
-
-    // Try to return cached data even if expired
-    const expired = localStorage.getItem(CACHE_KEY);
-    if (expired) {
-      return JSON.parse(expired);
-    }
-
-    return [];
-  }
-}
-
-// ── Cache helpers ──
-function getCachedExercises(): Exercise[] | null {
-  try {
-    const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
-    if (!expiry || Date.now() > parseInt(expiry)) {
-      return null;
-    }
-
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (!cached) return null;
-
-    return JSON.parse(cached);
-  } catch {
-    return null;
-  }
-}
-
-function cacheExercises(exercises: Exercise[]): void {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(exercises));
-    localStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + CACHE_DURATION));
-  } catch (error) {
-    console.error("Failed to cache exercises:", error);
-  }
+  return pendingFetch;
 }
 
 // ── Get unique body parts ──

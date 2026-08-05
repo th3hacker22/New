@@ -64,11 +64,32 @@ export const egyptianGymDictionary: Record<string, string> = {
   "Reverse": "معكوس"
 };
 
+// Pre-compiled regexes for performance (js-hoist-regexp)
+const DICTIONARY_REGEXES: { regex: RegExp; replacement: string }[] = Object.entries(egyptianGymDictionary).map(
+  ([eng, ar]) => ({
+    regex: new RegExp(`\\b${eng.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'),
+    replacement: ar,
+  })
+);
+
+// Cache for translated results (js-cache-function-results)
+const translationCache = new Map<string, string>();
+const MAX_CACHE_SIZE = 1000;
+
 export function translateExerciseNameToEgyptian(name: string): string {
+  if (!name) return "";
+  const cached = translationCache.get(name);
+  if (cached) return cached;
+
   let translated = name;
-  for (const [eng, ar] of Object.entries(egyptianGymDictionary)) {
-    const regex = new RegExp(`\\b${eng}\\b`, 'gi');
-    translated = translated.replace(regex, ar);
+  for (const { regex, replacement } of DICTIONARY_REGEXES) {
+    translated = translated.replace(regex, replacement);
   }
+
+  if (translationCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = translationCache.keys().next().value;
+    if (firstKey) translationCache.delete(firstKey);
+  }
+  translationCache.set(name, translated);
   return translated;
 }

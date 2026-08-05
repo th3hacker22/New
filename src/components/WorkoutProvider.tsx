@@ -7,6 +7,7 @@ import {
 } from "@/store/useWorkoutStore";
 import { useRoutineStore } from "@/store/useRoutineStore";
 import { useExerciseStore } from "@/store/useExerciseStore";
+import { storage } from "@/lib/storage";
 
 export interface WorkoutContextType {
   activeWorkout: ActiveWorkout | null;
@@ -69,11 +70,27 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     loadExercises();
 
     try {
-      const savedActive = localStorage.getItem("relift_active_workout");
+      const savedActive = storage.get<any>("active_workout" as any, null as any);
       if (savedActive && !activeWorkout) {
-        const parsed = JSON.parse(savedActive);
-        if (parsed && parsed.id && Array.isArray(parsed.exercises)) {
-          useWorkoutStore.setState({ activeWorkout: parsed });
+        const parsed = savedActive as any;
+        // Handle both wrapped and direct formats
+        const data = parsed?.data ? parsed.data : parsed;
+        const workoutData = data?.exercises ? data : (parsed?.id ? parsed : null);
+        const candidate = workoutData || (parsed && (parsed as any).id ? parsed : null);
+        // Fallback try to read legacy raw
+        const legacyRaw = localStorage.getItem("relift_active_workout");
+        const finalParsed = candidate || (legacyRaw ? JSON.parse(legacyRaw) : null);
+        if (finalParsed && finalParsed.id && Array.isArray(finalParsed.exercises)) {
+          useWorkoutStore.setState({ activeWorkout: finalParsed });
+        }
+      } else {
+        // legacy fallback
+        const legacy = localStorage.getItem("relift_active_workout");
+        if (legacy && !activeWorkout) {
+          const parsed = JSON.parse(legacy);
+          if (parsed && parsed.id && Array.isArray(parsed.exercises)) {
+            useWorkoutStore.setState({ activeWorkout: parsed });
+          }
         }
       }
     } catch (e) {
@@ -81,15 +98,13 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // 2. Persist activeWorkout changes automatically to local storage
+  // 2. Persist activeWorkout changes automatically to centralized storage
   useEffect(() => {
     try {
       if (activeWorkout) {
-        localStorage.setItem(
-          "relift_active_workout",
-          JSON.stringify(activeWorkout),
-        );
+        storage.set("active_workout" as any, activeWorkout as any);
       } else {
+        storage.remove("active_workout" as any);
         localStorage.removeItem("relift_active_workout");
       }
     } catch (e) {

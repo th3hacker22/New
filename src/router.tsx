@@ -3,45 +3,47 @@ import {
   createRoute,
   createRootRoute,
   Outlet,
+  lazyRouteComponent,
 } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 import Layout from "@/components/layout/Layout";
-import ScreenCaptureGuard from "@/components/extras/ScreenCaptureGuard";
-
-// ── Pages ──
 import HomePage from "@/pages/HomePage";
-import ExercisesPage from "@/pages/ExercisesPage";
-import ExerciseDetailPage from "@/pages/ExerciseDetailPage";
 import WorkoutSessionPage from "@/pages/WorkoutSessionPage";
-import StatsPage from "@/pages/StatsPage";
-import BodyPage from "@/pages/BodyPage";
-import ProfilePage from "@/pages/ProfilePage";
-import SettingsPage from "@/pages/SettingsPage";
-import BuilderPage from "@/pages/BuilderPage";
-import WizardPage from "@/pages/WizardPage";
-import WorkoutResultView from "@/pages/WorkoutResultView";
 import AuthPage from "@/pages/AuthPage";
-import NutritionPage from "@/pages/NutritionPage";
-import FeedPage from "@/pages/FeedPage";
-import BottomNav from "@/components/BottomNav";
-
 import { AuthGuard } from "@/components/AuthGuard";
 import { WorkoutProvider } from "@/components/WorkoutProvider";
+import AppSkeletonLoader from "@/components/extras/AppSkeletonLoader";
 
-// ── Root Route ──
+// ── Lazy loaded heavy pages (bundle-dynamic-imports) ──
+const ExercisesPage = lazy(() => import("@/pages/ExercisesPage"));
+const ExerciseDetailPage = lazy(() => import("@/pages/ExerciseDetailPage"));
+const StatsPage = lazy(() => import("@/pages/StatsPage"));
+const BodyPage = lazy(() => import("@/pages/BodyPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const BuilderPage = lazy(() => import("@/pages/BuilderPage"));
+const WizardPage = lazy(() => import("@/pages/WizardPage"));
+const WorkoutResultView = lazy(() => import("@/pages/WorkoutResultView"));
+const NutritionPage = lazy(() => import("@/pages/NutritionPage"));
+const FeedPage = lazy(() => import("@/pages/FeedPage"));
+
+function LazyWrapper({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<AppSkeletonLoader />}>{children}</Suspense>;
+}
+
 const rootRoute = createRootRoute({
   component: () => (
     <AuthGuard>
       <WorkoutProvider>
         <Layout>
           <Outlet />
-          <ScreenCaptureGuard />
+          {/* ScreenCaptureGuard removed - false sense of security */}
         </Layout>
       </WorkoutProvider>
     </AuthGuard>
   ),
 });
 
-// ── Routes ──
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
@@ -51,19 +53,19 @@ const indexRoute = createRoute({
 const builderRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/builder",
-  component: BuilderPage,
+  component: () => <LazyWrapper><BuilderPage /></LazyWrapper>,
 });
 
 const exercisesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/exercises",
-  component: ExercisesPage,
+  component: () => <LazyWrapper><ExercisesPage /></LazyWrapper>,
 });
 
 const exerciseDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/exercises/$exerciseId",
-  component: ExerciseDetailPage,
+  component: () => <LazyWrapper><ExerciseDetailPage /></LazyWrapper>,
 });
 
 const workoutSessionRoute = createRoute({
@@ -75,25 +77,25 @@ const workoutSessionRoute = createRoute({
 const statsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/stats",
-  component: StatsPage,
+  component: () => <LazyWrapper><StatsPage /></LazyWrapper>,
 });
 
 const bodyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/body",
-  component: BodyPage,
+  component: () => <LazyWrapper><BodyPage /></LazyWrapper>,
 });
 
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/profile",
-  component: ProfilePage,
+  component: () => <LazyWrapper><ProfilePage /></LazyWrapper>,
 });
 
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
-  component: SettingsPage,
+  component: () => <LazyWrapper><SettingsPage /></LazyWrapper>,
 });
 
 const authRoute = createRoute({
@@ -105,34 +107,27 @@ const authRoute = createRoute({
 const nutritionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/nutrition",
-  component: NutritionPage,
+  component: () => <LazyWrapper><NutritionPage /></LazyWrapper>,
 });
 
 const feedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/feed",
-  component: FeedPage,
+  component: () => <LazyWrapper><FeedPage /></LazyWrapper>,
 });
 
 const wizardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/wizard",
-  component: WizardPage,
+  component: () => <LazyWrapper><WizardPage /></LazyWrapper>,
 });
 
 const resultRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/generator/result",
-  component: WorkoutResultView,
+  component: () => <LazyWrapper><WorkoutResultView /></LazyWrapper>,
 });
 
-const bottomNavRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/bottom-nav",
-  component: BottomNav,
-});
-
-// ── Route Tree ──
 const routeTree = rootRoute.addChildren([
   indexRoute,
   builderRoute,
@@ -148,10 +143,8 @@ const routeTree = rootRoute.addChildren([
   feedRoute,
   wizardRoute,
   resultRoute,
-  bottomNavRoute,
 ]);
 
-// ── Router ──
 export const router = createRouter({
   routeTree,
   scrollRestoration: true,

@@ -152,22 +152,33 @@ export default function NutritionPage() {
     loadGoal();
   }, [loadGoal]);
 
-  // Water persistence
+  // Water persistence via centralized storage manager
   const [water, setWater] = useState(0);
   useEffect(() => {
-    const saved = localStorage.getItem(`water_intake_${formattedDate}`);
-    setWater(saved ? Number(saved) : 0);
+    try {
+      const { storage } = require("@/lib/storage");
+      const saved = storage.getString(`water_intake_${formattedDate}` as any, "0");
+      setWater(Number(saved) || 0);
+    } catch {
+      setWater(0);
+    }
   }, [formattedDate]);
 
   const handleWaterAdd = (amount: number) => {
     const nextWater = Math.max(0, water + amount);
     setWater(nextWater);
-    localStorage.setItem(`water_intake_${formattedDate}`, String(nextWater));
+    try {
+      const { storage } = require("@/lib/storage");
+      storage.set(`water_intake_${formattedDate}` as any, String(nextWater) as any);
+    } catch {}
   };
 
   const handleWaterReset = () => {
     setWater(0);
-    localStorage.setItem(`water_intake_${formattedDate}`, "0");
+    try {
+      const { storage } = require("@/lib/storage");
+      storage.set(`water_intake_${formattedDate}` as any, "0" as any);
+    } catch {}
   };
 
   const safeGoal = goal || {

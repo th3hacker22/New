@@ -26,25 +26,30 @@ export function applyTheme(theme: Theme) {
   }
 }
 
+import { storage } from "@/lib/storage";
+
 export function initThemeListener() {
   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
   const handleChange = () => {
-    const settingsStr = localStorage.getItem("pulse-settings");
-    if (settingsStr) {
-      try {
-        const settings = JSON.parse(settingsStr);
+    try {
+      // Try new storage manager first
+      const pulseSettings = localStorage.getItem("pulse-settings") || localStorage.getItem("relift_settings");
+      if (pulseSettings) {
+        const settings = JSON.parse(pulseSettings);
         if (settings?.state?.theme === "system") {
           applyTheme("system");
         }
-      } catch (e) {
-        // ignore
+      } else {
+        // Fallback via storage manager if needed
+        applyTheme("system");
       }
-    } else {
-       applyTheme("system");
+    } catch {
+      // ignore
     }
   };
 
-  mediaQuery.addEventListener("change", handleChange);
+  // passive listener for performance
+  mediaQuery.addEventListener("change", handleChange, { passive: true } as any);
   return () => mediaQuery.removeEventListener("change", handleChange);
 }
