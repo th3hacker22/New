@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { format, subDays, addDays, isSameDay } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/Button";
+import { useState, useEffect } from 'react';
+import { format, subDays, addDays, isSameDay } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/Button';
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,55 +22,142 @@ import {
   RotateCcw,
   Loader2,
   AlertCircle,
-  ArrowRightLeft
-} from "lucide-react";
-import { useNutritionStore } from "@/store/useNutritionStore";
-import { useAuthStore } from "@/store/useAuthStore";
-import { MealScanner } from "@/components/nutrition/MealScanner";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { useTranslation } from "@/i18n";
-import HealthySwapsHelper from "@/components/extras/HealthySwapsHelper";
-import nutritionMacrosImg from "@/assets/images/nutrition_macros_illustration_1784768406683.jpg";
-import breakfastMealImg from "@/assets/images/breakfast_meal_bg_1784776621698.jpg";
-import nutritionMealsImg from "@/assets/images/nutrition_meals_illustration_1784776025732.jpg";
-import aiFoodScannerImg from "@/assets/images/ai_food_scanner_illustration_1784776039871.jpg";
+  ArrowRightLeft,
+} from 'lucide-react';
+import { useNutritionStore } from '@/store/useNutritionStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { MealScanner } from '@/components/nutrition/MealScanner';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { useTranslation } from '@/i18n';
+import { storage } from '@/lib/storage';
+import HealthySwapsHelper from '@/components/extras/HealthySwapsHelper';
+import nutritionMacrosImg from '@/assets/images/nutrition_macros_illustration_1784768406683.jpg';
+import breakfastMealImg from '@/assets/images/breakfast_meal_bg_1784776621698.jpg';
+import nutritionMealsImg from '@/assets/images/nutrition_meals_illustration_1784776025732.jpg';
+import aiFoodScannerImg from '@/assets/images/ai_food_scanner_illustration_1784776039871.jpg';
 
 const ProteinMicroSvg = () => (
-  <svg viewBox="0 0 24 24" className="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    className="w-4 h-4 text-primary shrink-0"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
     <path d="M12 8v8M8 12h8" stroke="#ccff00" />
   </svg>
 );
 
 const CarbsMicroSvg = () => (
-  <svg viewBox="0 0 24 24" className="w-4 h-4 text-secondary shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    className="w-4 h-4 text-secondary shrink-0"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M12 3v18M12 9L8 6M12 11L16 8M12 15L8 12M12 17L16 14" stroke="#00ffff" />
   </svg>
 );
 
 const FatMicroSvg = () => (
-  <svg viewBox="0 0 24 24" className="w-4 h-4 text-warning shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    className="w-4 h-4 text-warning shrink-0"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" strokeOpacity="0.2" />
-    <path d="M12 7c-2.76 0-5 2.24-5 5s5 5 5 5 5-2.24 5-5-2.24-5-5-5z" fill="currentColor" fillOpacity="0.1" />
+    <path
+      d="M12 7c-2.76 0-5 2.24-5 5s5 5 5 5 5-2.24 5-5-2.24-5-5-5z"
+      fill="currentColor"
+      fillOpacity="0.1"
+    />
   </svg>
 );
 
 // Common presets with nutrition data
 const PRESET_FOODS = [
-  { name: "Boiled Eggs (2)", calories: 140, protein: 12, carbs: 1, fat: 10, mealType: "breakfast" as const },
-  { name: "Grilled Chicken Breast (150g)", calories: 247, protein: 46, carbs: 0, fat: 4, mealType: "lunch" as const },
-  { name: "Oatmeal with Honey", calories: 320, protein: 11, carbs: 54, fat: 6, mealType: "breakfast" as const },
-  { name: "Sweet Banana", calories: 105, protein: 1, carbs: 27, fat: 0, mealType: "snack" as const },
-  { name: "Basmati Rice cooked (150g)", calories: 200, protein: 4, carbs: 44, fat: 0, mealType: "lunch" as const },
-  { name: "Protein Whey Shake", calories: 130, protein: 25, carbs: 2, fat: 2, mealType: "snack" as const },
-  { name: "Dates (3 pieces)", calories: 80, protein: 1, carbs: 21, fat: 0, mealType: "snack" as const },
-  { name: "Healthy Beef Tagine", calories: 450, protein: 32, carbs: 24, fat: 22, mealType: "dinner" as const },
+  {
+    name: 'Boiled Eggs (2)',
+    calories: 140,
+    protein: 12,
+    carbs: 1,
+    fat: 10,
+    mealType: 'breakfast' as const,
+  },
+  {
+    name: 'Grilled Chicken Breast (150g)',
+    calories: 247,
+    protein: 46,
+    carbs: 0,
+    fat: 4,
+    mealType: 'lunch' as const,
+  },
+  {
+    name: 'Oatmeal with Honey',
+    calories: 320,
+    protein: 11,
+    carbs: 54,
+    fat: 6,
+    mealType: 'breakfast' as const,
+  },
+  {
+    name: 'Sweet Banana',
+    calories: 105,
+    protein: 1,
+    carbs: 27,
+    fat: 0,
+    mealType: 'snack' as const,
+  },
+  {
+    name: 'Basmati Rice cooked (150g)',
+    calories: 200,
+    protein: 4,
+    carbs: 44,
+    fat: 0,
+    mealType: 'lunch' as const,
+  },
+  {
+    name: 'Protein Whey Shake',
+    calories: 130,
+    protein: 25,
+    carbs: 2,
+    fat: 2,
+    mealType: 'snack' as const,
+  },
+  {
+    name: 'Dates (3 pieces)',
+    calories: 80,
+    protein: 1,
+    carbs: 21,
+    fat: 0,
+    mealType: 'snack' as const,
+  },
+  {
+    name: 'Healthy Beef Tagine',
+    calories: 450,
+    protein: 32,
+    carbs: 24,
+    fat: 22,
+    mealType: 'dinner' as const,
+  },
 ];
 
 export default function NutritionPage() {
   const { t, isAr } = useTranslation();
 
-  const labels = new Proxy({} as any, { get: (_: any, prop: string) => t(`nutrition.${prop}`) }) as Record<string, string>;
+  const labels = new Proxy({} as any, {
+    get: (_: any, prop: string) => t(`nutrition.${prop}`),
+  }) as Record<string, string>;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAddModal, setShowAddModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -78,23 +165,16 @@ export default function NutritionPage() {
   const [isSwapsOpen, setIsSwapsOpen] = useState(false);
 
   // AI Logger States
-  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPrompt, setAiPrompt] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<any | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  const {
-    entries,
-    goal,
-    loadEntries,
-    loadGoal,
-    addFoodEntry,
-    deleteFoodEntry,
-    setGoal,
-  } = useNutritionStore();
-  
+  const { entries, goal, loadEntries, loadGoal, addFoodEntry, deleteFoodEntry, setGoal } =
+    useNutritionStore();
+
   const user = useAuthStore((s) => s.user);
-  const formattedDate = format(currentDate, "yyyy-MM-dd");
+  const formattedDate = format(currentDate, 'yyyy-MM-dd');
 
   // Load entries and goals
   useEffect(() => {
@@ -109,8 +189,7 @@ export default function NutritionPage() {
   const [water, setWater] = useState(0);
   useEffect(() => {
     try {
-      const { storage } = require("@/lib/storage");
-      const saved = storage.getString(`water_intake_${formattedDate}` as any, "0");
+      const saved = storage.getString(`water_intake_${formattedDate}` as any, '0');
       setWater(Number(saved) || 0);
     } catch {
       setWater(0);
@@ -121,17 +200,19 @@ export default function NutritionPage() {
     const nextWater = Math.max(0, water + amount);
     setWater(nextWater);
     try {
-      const { storage } = require("@/lib/storage");
       storage.set(`water_intake_${formattedDate}` as any, String(nextWater) as any);
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to persist water intake', e);
+    }
   };
 
   const handleWaterReset = () => {
     setWater(0);
     try {
-      const { storage } = require("@/lib/storage");
-      storage.set(`water_intake_${formattedDate}` as any, "0" as any);
-    } catch {}
+      storage.set(`water_intake_${formattedDate}` as any, '0' as any);
+    } catch (e) {
+      console.warn('Failed to reset water intake', e);
+    }
   };
 
   const safeGoal = goal || {
@@ -139,8 +220,8 @@ export default function NutritionPage() {
     protein: 140,
     carbs: 220,
     fat: 70,
-    id: "temp",
-    updatedAt: "",
+    id: 'temp',
+    updatedAt: '',
   };
 
   // Aggregated macros
@@ -170,12 +251,12 @@ export default function NutritionPage() {
     await addFoodEntry(
       {
         date: formattedDate,
-        name: formData.get("name") as string,
-        calories: Number(formData.get("calories")),
-        protein: Number(formData.get("protein")),
-        carbs: Number(formData.get("carbs")),
-        fat: Number(formData.get("fat")),
-        mealType: formData.get("mealType") as any,
+        name: formData.get('name') as string,
+        calories: Number(formData.get('calories')),
+        protein: Number(formData.get('protein')),
+        carbs: Number(formData.get('carbs')),
+        fat: Number(formData.get('fat')),
+        mealType: formData.get('mealType') as any,
       },
       user?.uid,
     );
@@ -188,10 +269,10 @@ export default function NutritionPage() {
     const formData = new FormData(e.currentTarget);
     await setGoal(
       {
-        dailyCalories: Number(formData.get("calories")),
-        protein: Number(formData.get("protein")),
-        carbs: Number(formData.get("carbs")),
-        fat: Number(formData.get("fat")),
+        dailyCalories: Number(formData.get('calories')),
+        protein: Number(formData.get('protein')),
+        carbs: Number(formData.get('carbs')),
+        fat: Number(formData.get('fat')),
       },
       user?.uid,
     );
@@ -206,24 +287,26 @@ export default function NutritionPage() {
     setAiResult(null);
 
     try {
-      const response = await fetch("/api/parse-nutrition", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/parse-nutrition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: aiPrompt,
-          mealTypeHint: "snack"
-        })
+          mealTypeHint: 'snack',
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Unable to analyze food. Make sure the server config has an active GEMINI_API_KEY.");
+        throw new Error(
+          'Unable to analyze food. Make sure the server config has an active GEMINI_API_KEY.',
+        );
       }
 
       const data = await response.json();
       setAiResult(data);
     } catch (err: any) {
       console.error(err);
-      setAiError("Failed to analyze meal. Please ensure your Gemini key is valid.");
+      setAiError('Failed to analyze meal. Please ensure your Gemini key is valid.');
     } finally {
       setIsAiLoading(false);
     }
@@ -231,32 +314,38 @@ export default function NutritionPage() {
 
   const handleAddAiResult = async () => {
     if (!aiResult) return;
-    await addFoodEntry({
-      date: formattedDate,
-      name: aiResult.name,
-      calories: aiResult.calories,
-      protein: aiResult.protein,
-      carbs: aiResult.carbs,
-      fat: aiResult.fat,
-      mealType: aiResult.mealType as any
-    }, user?.uid);
+    await addFoodEntry(
+      {
+        date: formattedDate,
+        name: aiResult.name,
+        calories: aiResult.calories,
+        protein: aiResult.protein,
+        carbs: aiResult.carbs,
+        fat: aiResult.fat,
+        mealType: aiResult.mealType as any,
+      },
+      user?.uid,
+    );
 
-    setAiPrompt("");
+    setAiPrompt('');
     setAiResult(null);
   };
 
   // Quick Preset Add
-  const handleQuickAdd = async (preset: typeof PRESET_FOODS[0]) => {
+  const handleQuickAdd = async (preset: (typeof PRESET_FOODS)[0]) => {
     const name = preset.name;
-    await addFoodEntry({
-      date: formattedDate,
-      name,
-      calories: preset.calories,
-      protein: preset.protein,
-      carbs: preset.carbs,
-      fat: preset.fat,
-      mealType: preset.mealType
-    }, user?.uid);
+    await addFoodEntry(
+      {
+        date: formattedDate,
+        name,
+        calories: preset.calories,
+        protein: preset.protein,
+        carbs: preset.carbs,
+        fat: preset.fat,
+        mealType: preset.mealType,
+      },
+      user?.uid,
+    );
   };
 
   // Circular progress properties
@@ -294,14 +383,12 @@ export default function NutritionPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-bg-surface/90 via-bg-surface/60 to-transparent flex flex-col justify-center p-5">
           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 rounded-md self-start mb-1 backdrop-blur-md">
-            {isAr ? "تغذية ذكية 3D" : "3D MACRO TRACKER"}
+            {isAr ? 'تغذية ذكية 3D' : '3D MACRO TRACKER'}
           </span>
           <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-text-primary">
             {labels.title}
           </h1>
-          <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md">
-            {labels.subtitle}
-          </p>
+          <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md">{labels.subtitle}</p>
         </div>
       </div>
 
@@ -309,7 +396,7 @@ export default function NutritionPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4 gap-3">
         <div>
           <h2 className="text-lg font-black uppercase tracking-tight text-text-primary">
-            {isAr ? "متابعة السعرات والماكروز اليومية" : "Daily Macro Overview"}
+            {isAr ? 'متابعة السعرات والماكروز اليومية' : 'Daily Macro Overview'}
           </h2>
         </div>
         <button
@@ -317,7 +404,7 @@ export default function NutritionPage() {
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-primary/30 bg-primary-dim/15 hover:bg-primary/20 hover:border-primary/50 text-xs font-black uppercase tracking-wider text-primary transition-all shadow-glow-primary/5 self-start sm:self-center cursor-pointer"
         >
           <ArrowRightLeft className="w-4 h-4 text-primary animate-pulse" />
-          <span>{isAr ? "دليل البدائل ومصحح الغش" : "Swaps & Cheat Balance"}</span>
+          <span>{isAr ? 'دليل البدائل ومصحح الغش' : 'Swaps & Cheat Balance'}</span>
         </button>
       </div>
 
@@ -326,7 +413,7 @@ export default function NutritionPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-xs text-text-muted font-bold uppercase tracking-wide">
             <Calendar className="h-4 w-4 text-primary" />
-            <span>{format(currentDate, "EEEE, MMMM dd")}</span>
+            <span>{format(currentDate, 'EEEE, MMMM dd')}</span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -361,16 +448,16 @@ export default function NutritionPage() {
                 onClick={() => setCurrentDate(day)}
                 className={`flex flex-col items-center justify-center rounded-xl py-2 px-1 transition-all ${
                   isSelected
-                    ? "bg-gradient-to-br from-primary to-primary-hover text-bg shadow-md scale-105"
-                    : "bg-bg hover:bg-bg-elevated/40"
-                } border ${isSelected ? "border-transparent" : "border-border/30"}`}
+                    ? 'bg-gradient-to-br from-primary to-primary-hover text-bg shadow-md scale-105'
+                    : 'bg-bg hover:bg-bg-elevated/40'
+                } border ${isSelected ? 'border-transparent' : 'border-border/30'}`}
               >
-                <span className={`text-[10px] font-black uppercase ${isSelected ? "text-bg" : "text-text-muted"}`}>
-                  {format(day, "eee")}
+                <span
+                  className={`text-[10px] font-black uppercase ${isSelected ? 'text-bg' : 'text-text-muted'}`}
+                >
+                  {format(day, 'eee')}
                 </span>
-                <span className="text-base font-black leading-none mt-1">
-                  {format(day, "d")}
-                </span>
+                <span className="text-base font-black leading-none mt-1">{format(day, 'd')}</span>
                 {isTodayDate && !isSelected && (
                   <span className="h-1 w-1 rounded-full bg-primary mt-1" />
                 )}
@@ -382,7 +469,6 @@ export default function NutritionPage() {
 
       {/* Main Grid: Summary Rings & Progress & AI Helper */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        
         {/* Left Column: Progress Ring Card */}
         <div className="glass-card relative flex flex-col gap-6 overflow-hidden rounded-3xl border border-border/80 p-6 lg:col-span-1">
           <div className="flex items-center justify-between">
@@ -390,7 +476,9 @@ export default function NutritionPage() {
               <div className="rounded-lg bg-primary/10 p-2 text-primary">
                 <Flame className="h-5 w-5 animate-pulse" />
               </div>
-              <h2 className="text-base font-black uppercase tracking-wider">{labels.caloriesRemaining}</h2>
+              <h2 className="text-base font-black uppercase tracking-wider">
+                {labels.caloriesRemaining}
+              </h2>
             </div>
             <button
               onClick={() => setShowGoalModal(true)}
@@ -423,7 +511,7 @@ export default function NutritionPage() {
                 strokeDasharray={circumference}
                 initial={{ strokeDashoffset: circumference }}
                 animate={{ strokeDashoffset }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
                 strokeLinecap="round"
               />
             </svg>
@@ -440,23 +528,28 @@ export default function NutritionPage() {
           {/* Calories agg */}
           <div className="grid grid-cols-2 border-t border-border/40 pt-4 text-center">
             <div className="border-r border-border/40">
-              <div className="text-[10px] font-bold uppercase text-text-muted">{labels.consumed}</div>
-              <div className="text-lg font-black text-primary">{totalCalories} <span className="text-xs">kcal</span></div>
+              <div className="text-[10px] font-bold uppercase text-text-muted">
+                {labels.consumed}
+              </div>
+              <div className="text-lg font-black text-primary">
+                {totalCalories} <span className="text-xs">kcal</span>
+              </div>
             </div>
             <div>
               <div className="text-[10px] font-bold uppercase text-text-muted">{labels.goal}</div>
-              <div className="text-lg font-black text-text-secondary">{safeGoal.dailyCalories} <span className="text-xs">kcal</span></div>
+              <div className="text-lg font-black text-text-secondary">
+                {safeGoal.dailyCalories} <span className="text-xs">kcal</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Middle Column: Macro Bars & Water Tracker */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          
           {/* Bento-Item 1: Macro Goals */}
           <div className="glass-card rounded-3xl border border-primary/10 bg-[#080a10]/60 p-6 flex flex-col gap-4 relative overflow-hidden group/macros">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#141923_1px,transparent_1px),linear-gradient(to_bottom,#141923_1px,transparent_1px)] bg-[size:24px_24px] opacity-[0.05] pointer-events-none" />
-            
+
             <h2 className="text-base font-black uppercase tracking-wider flex items-center gap-2 relative z-10">
               <Apple className="h-5 w-5 text-primary filter drop-shadow-[0_0_8px_rgba(204,255,0,0.3)]" />
               <span>Macronutrient Intake</span>
@@ -470,13 +563,17 @@ export default function NutritionPage() {
                     <ProteinMicroSvg />
                     <span className="text-primary">{labels.protein}</span>
                   </div>
-                  <span className="font-mono text-text-secondary">{totalProtein}g / {safeGoal.protein}g</span>
+                  <span className="font-mono text-text-secondary">
+                    {totalProtein}g / {safeGoal.protein}g
+                  </span>
                 </div>
                 <div className="h-3 w-full rounded-full bg-[#141923] overflow-hidden p-[2px] border border-white/5">
                   <motion.div
                     className="h-full rounded-full bg-gradient-to-r from-primary to-primary-hover shadow-[0_0_8px_#ccff00]"
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, (totalProtein / safeGoal.protein) * 100)}%` }}
+                    animate={{
+                      width: `${Math.min(100, (totalProtein / safeGoal.protein) * 100)}%`,
+                    }}
                     transition={{ duration: 0.6 }}
                   />
                 </div>
@@ -492,7 +589,9 @@ export default function NutritionPage() {
                     <CarbsMicroSvg />
                     <span className="text-secondary">{labels.carbs}</span>
                   </div>
-                  <span className="font-mono text-text-secondary">{totalCarbs}g / {safeGoal.carbs}g</span>
+                  <span className="font-mono text-text-secondary">
+                    {totalCarbs}g / {safeGoal.carbs}g
+                  </span>
                 </div>
                 <div className="h-3 w-full rounded-full bg-[#141923] overflow-hidden p-[2px] border border-white/5">
                   <motion.div
@@ -514,7 +613,9 @@ export default function NutritionPage() {
                     <FatMicroSvg />
                     <span className="text-warning">{labels.fat}</span>
                   </div>
-                  <span className="font-mono text-text-secondary">{totalFat}g / {safeGoal.fat}g</span>
+                  <span className="font-mono text-text-secondary">
+                    {totalFat}g / {safeGoal.fat}g
+                  </span>
                 </div>
                 <div className="h-3 w-full rounded-full bg-[#141923] overflow-hidden p-[2px] border border-white/5">
                   <motion.div
@@ -553,7 +654,7 @@ export default function NutritionPage() {
                   className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600/80 to-blue-400/50"
                   initial={{ height: 0 }}
                   animate={{ height: `${Math.min(100, (water / 3000) * 100)}%` }}
-                  transition={{ type: "spring", stiffness: 40 }}
+                  transition={{ type: 'spring', stiffness: 40 }}
                 />
                 <div className="relative z-10 flex flex-col items-center justify-center text-center">
                   <span className="text-2xl font-black text-text-primary drop-shadow-md">
@@ -603,14 +704,13 @@ export default function NutritionPage() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
       {/* AI Log Assistant (Stellar Box) */}
       <div className="glass-card overflow-hidden rounded-3xl border border-primary/20 shadow-lg shadow-primary/5 p-6 flex flex-col gap-4 relative">
         <div className="absolute right-0 top-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="flex items-center justify-between">
           <h2 className="text-base font-black uppercase tracking-wider flex items-center gap-2">
             <span className="rounded-lg bg-primary/20 p-1.5 text-primary">
@@ -637,7 +737,7 @@ export default function NutritionPage() {
           {/* Holographic Food Scanner Column */}
           <div className="md:col-span-4 hidden md:flex flex-col items-center justify-center rounded-2xl border border-primary/20 p-5 relative overflow-hidden group/scanner shadow-[0_0_20px_rgba(204,255,0,0.1)] min-h-[160px]">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#141923_1px,transparent_1px),linear-gradient(to_bottom,#141923_1px,transparent_1px)] bg-[size:16px_16px] opacity-[0.1]" />
-            
+
             {/* Background 3D Render Image */}
             <div className="absolute inset-0 z-0">
               <img
@@ -649,20 +749,22 @@ export default function NutritionPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-[#080a10] via-transparent to-transparent opacity-90" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#080a10]/80 via-[#080a10]/50 to-transparent" />
             </div>
-            
+
             {/* Animated Laser Scan Line */}
             <motion.div
               className="absolute inset-x-0 h-[2px] bg-primary shadow-[0_0_12px_#ccff00] z-20 pointer-events-none"
-              animate={{ top: ["10%", "90%", "10%"] }}
-              transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+              animate={{ top: ['10%', '90%', '10%'] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
             />
-            
+
             <div className="text-center mt-auto relative z-20 w-full flex flex-col items-center">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary drop-shadow-[0_0_8px_rgba(204,255,0,0.8)] bg-black/60 px-2.5 py-1 rounded backdrop-blur-md border border-primary/20">
-                {isAr ? "المسح الذكي بالرؤية" : "AI SENSORY SCAN"}
+                {isAr ? 'المسح الذكي بالرؤية' : 'AI SENSORY SCAN'}
               </span>
               <p className="text-[9px] text-text-muted font-bold mt-2 drop-shadow-md bg-black/60 px-2 py-1 rounded backdrop-blur-md w-full">
-                {isAr ? "تحليل السعرات الفوري بالذكاء الاصطناعي" : "Instant optical calorie extraction"}
+                {isAr
+                  ? 'تحليل السعرات الفوري بالذكاء الاصطناعي'
+                  : 'Instant optical calorie extraction'}
               </p>
             </div>
           </div>
@@ -691,7 +793,13 @@ export default function NutritionPage() {
                 disabled={isAiLoading || !aiPrompt.trim()}
                 variant="outline"
                 className="px-5 font-black uppercase tracking-wider text-xs border border-primary/40 hover:bg-primary-dim/20"
-                icon={isAiLoading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                icon={
+                  isAiLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  )
+                }
               >
                 {isAiLoading ? labels.aiAnalyzing : labels.aiAnalyze}
               </Button>
@@ -717,7 +825,10 @@ export default function NutritionPage() {
                     <div>
                       <h4 className="text-base font-black text-text-primary">{aiResult.name}</h4>
                       <p className="text-[10px] text-text-muted mt-0.5">
-                        {labels.suggestedMeal}: <span className="font-bold uppercase text-primary">{labels[aiResult.mealType as keyof typeof labels] || aiResult.mealType}</span>
+                        {labels.suggestedMeal}:{' '}
+                        <span className="font-bold uppercase text-primary">
+                          {labels[aiResult.mealType as keyof typeof labels] || aiResult.mealType}
+                        </span>
                       </p>
                     </div>
                     <span className="rounded-xl bg-primary/20 px-3 py-1 text-sm font-black text-primary">
@@ -727,15 +838,25 @@ export default function NutritionPage() {
 
                   <div className="grid grid-cols-3 gap-2 text-center mt-1">
                     <div className="rounded-lg bg-bg/50 p-2 border border-border/30">
-                      <div className="text-[9px] font-bold text-text-muted uppercase">{labels.protein}</div>
-                      <div className="text-sm font-black text-text-secondary">{aiResult.protein}g</div>
+                      <div className="text-[9px] font-bold text-text-muted uppercase">
+                        {labels.protein}
+                      </div>
+                      <div className="text-sm font-black text-text-secondary">
+                        {aiResult.protein}g
+                      </div>
                     </div>
                     <div className="rounded-lg bg-bg/50 p-2 border border-border/30">
-                      <div className="text-[9px] font-bold text-text-muted uppercase">{labels.carbs}</div>
-                      <div className="text-sm font-black text-text-secondary">{aiResult.carbs}g</div>
+                      <div className="text-[9px] font-bold text-text-muted uppercase">
+                        {labels.carbs}
+                      </div>
+                      <div className="text-sm font-black text-text-secondary">
+                        {aiResult.carbs}g
+                      </div>
                     </div>
                     <div className="rounded-lg bg-bg/50 p-2 border border-border/30">
-                      <div className="text-[9px] font-bold text-text-muted uppercase">{labels.fat}</div>
+                      <div className="text-[9px] font-bold text-text-muted uppercase">
+                        {labels.fat}
+                      </div>
                       <div className="text-sm font-black text-text-secondary">{aiResult.fat}g</div>
                     </div>
                   </div>
@@ -784,7 +905,10 @@ export default function NutritionPage() {
                   <Plus className="h-3.5 w-3.5 text-text-muted group-hover:text-primary transition-all shrink-0" />
                 </div>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs font-black text-text-secondary">{preset.calories} <span className="text-[9px] font-medium text-text-muted">kcal</span></span>
+                  <span className="text-xs font-black text-text-secondary">
+                    {preset.calories}{' '}
+                    <span className="text-[9px] font-medium text-text-muted">kcal</span>
+                  </span>
                   <span className="text-[10px] text-text-muted font-mono">{preset.protein}P</span>
                 </div>
               </button>
@@ -795,14 +919,14 @@ export default function NutritionPage() {
 
       {/* Daily Logs Classified by Meal Type */}
       <div className="flex flex-col gap-4">
-        {(["breakfast", "lunch", "dinner", "snack"] as const).map((meal) => {
+        {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((meal) => {
           const mealEntries = entries.filter((e) => e.mealType === meal);
           const mealCals = mealEntries.reduce((acc, sum) => acc + sum.calories, 0);
 
           let MealIcon = Coffee;
-          if (meal === "lunch") MealIcon = Utensils;
-          if (meal === "dinner") MealIcon = Moon;
-          if (meal === "snack") MealIcon = Cookie;
+          if (meal === 'lunch') MealIcon = Utensils;
+          if (meal === 'dinner') MealIcon = Moon;
+          if (meal === 'snack') MealIcon = Cookie;
 
           return (
             <div
@@ -828,11 +952,14 @@ export default function NutritionPage() {
                   {/* Background Image */}
                   <div className="absolute inset-0 z-0 pointer-events-none">
                     <img
-                      src={meal === "breakfast" ? breakfastMealImg : nutritionMealsImg}
+                      src={meal === 'breakfast' ? breakfastMealImg : nutritionMealsImg}
                       alt="Meal Prep Illustration"
                       className={`w-full h-full object-cover filter contrast-125 opacity-30 group-hover/empty:scale-105 transition-transform duration-700 mix-blend-luminosity ${
-                        meal === "lunch" ? "hue-rotate-180" : 
-                        meal === "snack" ? "hue-rotate-90 saturate-200" : ""
+                        meal === 'lunch'
+                          ? 'hue-rotate-180'
+                          : meal === 'snack'
+                            ? 'hue-rotate-90 saturate-200'
+                            : ''
                       }`}
                       referrerPolicy="no-referrer"
                     />
@@ -843,15 +970,15 @@ export default function NutritionPage() {
                   <div className="text-right sm:text-left relative z-10 w-full mt-auto">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md backdrop-blur-md">
-                        {isAr ? "وجبة مقترحة" : "Suggested Fuel"}
+                        {isAr ? 'وجبة مقترحة' : 'Suggested Fuel'}
                       </span>
                     </div>
                     <h4 className="text-sm font-black uppercase tracking-wider text-text-primary drop-shadow-md">
                       {isAr ? `تسجيل وجبة ${labels[meal]}` : `Log your ${meal}`}
                     </h4>
                     <p className="text-[11px] text-text-muted font-bold mt-1 leading-relaxed max-w-[80%]">
-                      {isAr 
-                        ? `لم تسجل أي طعام في ${labels[meal]} بعد. حافظ على نمط حياتك المتوازن وسجل طعامك!` 
+                      {isAr
+                        ? `لم تسجل أي طعام في ${labels[meal]} بعد. حافظ على نمط حياتك المتوازن وسجل طعامك!`
                         : `No entries logged in ${meal} yet. Fuel your body with fresh ingredients and record your macros.`}
                     </p>
                   </div>
@@ -864,9 +991,12 @@ export default function NutritionPage() {
                       className="flex justify-between items-center bg-bg/40 border border-border/10 p-3 rounded-2xl hover:border-border/30 hover:bg-bg/60 transition-all group/item"
                     >
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-extrabold text-text-primary">{entry.name}</span>
+                        <span className="text-sm font-extrabold text-text-primary">
+                          {entry.name}
+                        </span>
                         <span className="text-[10px] text-text-muted font-mono tracking-wide">
-                          {entry.protein}g {labels.protein} • {entry.carbs}g {labels.carbs} • {entry.fat}g {labels.fat}
+                          {entry.protein}g {labels.protein} • {entry.carbs}g {labels.carbs} •{' '}
+                          {entry.fat}g {labels.fat}
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -921,7 +1051,9 @@ export default function NutritionPage() {
               </h2>
               <form onSubmit={handleAddSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-text-muted uppercase">{labels.foodName}</label>
+                  <label className="text-[10px] font-bold text-text-muted uppercase">
+                    {labels.foodName}
+                  </label>
                   <input
                     required
                     name="name"
@@ -930,10 +1062,12 @@ export default function NutritionPage() {
                     className="w-full rounded-xl border border-border bg-bg p-3 text-sm text-text-primary focus:border-primary focus:outline-none"
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-text-muted uppercase">{labels.calories}</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase">
+                      {labels.calories}
+                    </label>
                     <input
                       required
                       name="calories"
@@ -943,7 +1077,9 @@ export default function NutritionPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-text-muted uppercase">{labels.mealType}</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase">
+                      {labels.mealType}
+                    </label>
                     <select
                       required
                       name="mealType"
@@ -959,7 +1095,9 @@ export default function NutritionPage() {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-text-muted uppercase text-primary">{labels.protein} (g)</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase text-primary">
+                      {labels.protein} (g)
+                    </label>
                     <input
                       required
                       name="protein"
@@ -969,7 +1107,9 @@ export default function NutritionPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-text-muted uppercase text-secondary">{labels.carbs} (g)</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase text-secondary">
+                      {labels.carbs} (g)
+                    </label>
                     <input
                       required
                       name="carbs"
@@ -979,7 +1119,9 @@ export default function NutritionPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-text-muted uppercase text-warning">{labels.fat} (g)</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase text-warning">
+                      {labels.fat} (g)
+                    </label>
                     <input
                       required
                       name="fat"
@@ -1105,11 +1247,7 @@ export default function NutritionPage() {
         )}
       </AnimatePresence>
 
-      <HealthySwapsHelper
-        isOpen={isSwapsOpen}
-        onClose={() => setIsSwapsOpen(false)}
-        isAr={isAr}
-      />
+      <HealthySwapsHelper isOpen={isSwapsOpen} onClose={() => setIsSwapsOpen(false)} isAr={isAr} />
     </motion.div>
   );
 }

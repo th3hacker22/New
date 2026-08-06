@@ -6,3 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+
+# Test / cache
+*.tsbuildinfo
+.eslintcache

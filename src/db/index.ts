@@ -1,9 +1,14 @@
-import Dexie, { type Table } from "dexie";
-import type { Exercise } from "@/types/exercise";
-import { uid } from "@/utils/id";
+import Dexie, { type Table } from 'dexie';
+import type { Exercise } from '@/types/exercise';
+import { uid } from '@/utils/id';
 
 // ── Import analytics helpers ──
-import { calculateSessionVolume, getWeekKey as getWeekKeyInternal, getWorkoutStreak as getStreakNew, getWeeklyVolumeData } from "./analytics";
+import {
+  calculateSessionVolume,
+  getWeekKey as getWeekKeyInternal,
+  getWorkoutStreak as getStreakNew,
+  getWeeklyVolumeData,
+} from './analytics';
 export { calculateSessionVolume, getWeeklyVolumeData };
 export const getWeekKey = getWeekKeyInternal;
 export const getWorkoutStreak = getStreakNew;
@@ -57,7 +62,7 @@ export interface BodyMeasurement {
 export interface ProgressPhoto {
   id: string;
   date: string;
-  type: "front" | "side" | "back";
+  type: 'front' | 'side' | 'back';
   imageBlob: Blob;
   thumbnailBlob?: Blob;
   notes?: string;
@@ -106,7 +111,7 @@ export interface FoodEntry {
   protein: number;
   carbs: number;
   fat: number;
-  mealType: "breakfast" | "lunch" | "dinner" | "snack";
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   createdAt: string;
   updatedAt: string;
   deleted?: boolean;
@@ -142,53 +147,53 @@ class PulseDB extends Dexie {
   favoriteExercises!: Table<{ id: string }>;
 
   constructor() {
-    super("PulseDB");
+    super('PulseDB');
 
     this.version(4).stores({
-      exercises_v2: "id, category, muscleGroup",
-      workoutSessions: "++id, date, completed",
-      bodyMeasurements: "++id, date",
-      progressPhotos: "++id, date, type",
-      userProfile: "++id",
-      routines: "++id, name",
+      exercises_v2: 'id, category, muscleGroup',
+      workoutSessions: '++id, date, completed',
+      bodyMeasurements: '++id, date',
+      progressPhotos: '++id, date, type',
+      userProfile: '++id',
+      routines: '++id, name',
     });
 
     this.version(5)
       .stores({
-        exercises_v2: "id, category, muscleGroup",
-        workoutSessions: "++id, date, completed",
-        bodyMeasurements: "++id, date",
-        progressPhotos: "++id, date, type",
-        userProfile: "++id",
-        routines: "++id, name",
+        exercises_v2: 'id, category, muscleGroup',
+        workoutSessions: '++id, date, completed',
+        bodyMeasurements: '++id, date',
+        progressPhotos: '++id, date, type',
+        userProfile: '++id',
+        routines: '++id, name',
       })
       .upgrade(async (tx) => {
         const upgradeCollection = async (tableName: string) => {
           const collection = tx.table(tableName);
           const records = await collection.toArray();
           for (const record of records) {
-            if (typeof record.id === "number") {
+            if (typeof record.id === 'number') {
               await collection.delete(record.id);
               record.id = uid();
               await collection.add(record);
             }
           }
         };
-        await upgradeCollection("workoutSessions");
-        await upgradeCollection("bodyMeasurements");
-        await upgradeCollection("progressPhotos");
-        await upgradeCollection("userProfile");
-        await upgradeCollection("routines");
+        await upgradeCollection('workoutSessions');
+        await upgradeCollection('bodyMeasurements');
+        await upgradeCollection('progressPhotos');
+        await upgradeCollection('userProfile');
+        await upgradeCollection('routines');
       });
 
     this.version(6)
       .stores({
-        exercises_v2: "id, category, muscleGroup",
-        workoutSessions: "++id, date, completed, updatedAt, deleted",
-        bodyMeasurements: "++id, date, updatedAt, deleted",
-        progressPhotos: "++id, date, type, updatedAt, deleted",
-        userProfile: "++id, updatedAt, deleted",
-        routines: "++id, name, updatedAt, deleted",
+        exercises_v2: 'id, category, muscleGroup',
+        workoutSessions: '++id, date, completed, updatedAt, deleted',
+        bodyMeasurements: '++id, date, updatedAt, deleted',
+        progressPhotos: '++id, date, type, updatedAt, deleted',
+        userProfile: '++id, updatedAt, deleted',
+        routines: '++id, name, updatedAt, deleted',
       })
       .upgrade(async (tx) => {
         const time = new Date().toISOString();
@@ -199,23 +204,23 @@ class PulseDB extends Dexie {
             if (item.deleted === undefined) item.deleted = false;
           });
         };
-        await upgradeColl("workoutSessions");
-        await upgradeColl("bodyMeasurements");
-        await upgradeColl("userProfile");
-        await upgradeColl("routines");
+        await upgradeColl('workoutSessions');
+        await upgradeColl('bodyMeasurements');
+        await upgradeColl('userProfile');
+        await upgradeColl('routines');
       });
 
     this.version(9).stores({
-      exercises_v2: "id, category, muscleGroup",
-      workoutSessions: "++id, date, completed, updatedAt, deleted",
-      bodyMeasurements: "++id, date, updatedAt, deleted",
-      progressPhotos: "++id, date, type, updatedAt, deleted",
-      userProfile: "++id, updatedAt, deleted",
-      routines: "++id, name, updatedAt, deleted",
-      foodEntries: "id, date, mealType, updatedAt, deleted",
-      nutritionGoals: "id, updatedAt, deleted",
-      unlockedAchievements: "id, achievementId, updatedAt, deleted",
-      favoriteExercises: "id",
+      exercises_v2: 'id, category, muscleGroup',
+      workoutSessions: '++id, date, completed, updatedAt, deleted',
+      bodyMeasurements: '++id, date, updatedAt, deleted',
+      progressPhotos: '++id, date, type, updatedAt, deleted',
+      userProfile: '++id, updatedAt, deleted',
+      routines: '++id, name, updatedAt, deleted',
+      foodEntries: 'id, date, mealType, updatedAt, deleted',
+      nutritionGoals: 'id, updatedAt, deleted',
+      unlockedAchievements: 'id, achievementId, updatedAt, deleted',
+      favoriteExercises: 'id',
     });
   }
 }
@@ -223,12 +228,12 @@ class PulseDB extends Dexie {
 export const db = new PulseDB();
 
 db.open().catch(async (err) => {
-  if (err.name === "UpgradeError") {
-    console.warn("Database schema change detected. Resetting local database...");
+  if (err.name === 'UpgradeError') {
+    console.warn('Database schema change detected. Resetting local database...');
     await db.delete();
     window.location.reload();
   } else {
-    console.error("Failed to open DB:", err);
+    console.error('Failed to open DB:', err);
   }
 });
 
@@ -242,9 +247,10 @@ export async function getWorkoutStreakLegacy(): Promise<number> {
 export async function getPersonalRecords(): Promise<
   { exerciseId: string | number; exerciseName: string; maxWeight: number; date: string }[]
 > {
-  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = await db.workoutSessions.where('completed').equals(1).toArray();
 
-  const records: Map<string | number, { exerciseName: string; maxWeight: number; date: string }> = new Map();
+  const records: Map<string | number, { exerciseName: string; maxWeight: number; date: string }> =
+    new Map();
 
   for (const session of sessions) {
     for (const ex of session.exercises) {
@@ -281,7 +287,7 @@ export async function getWeeklyTonnage(weeks = 4): Promise<{ week: string; tonna
 export async function getExerciseProgress(
   exerciseId: string | number,
 ): Promise<{ date: string; maxWeight: number }[]> {
-  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = await db.workoutSessions.where('completed').equals(1).toArray();
 
   const progress: { date: string; maxWeight: number }[] = [];
 
@@ -290,7 +296,7 @@ export async function getExerciseProgress(
     if (ex && ex.sets.length > 0) {
       const maxWeight = Math.max(...ex.sets.map((s) => s.weight || 0));
       progress.push({
-        date: session.date.split("T")[0],
+        date: session.date.split('T')[0],
         maxWeight,
       });
     }
@@ -302,7 +308,7 @@ export async function getExerciseProgress(
 export async function getEstimated1RM(
   exerciseId: string | number,
 ): Promise<{ date: string; e1rm: number }[]> {
-  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = await db.workoutSessions.where('completed').equals(1).toArray();
 
   const progress: { date: string; e1rm: number }[] = [];
 
@@ -310,14 +316,12 @@ export async function getEstimated1RM(
     const ex = session.exercises.find((e) => String(e.exerciseId) === String(exerciseId));
     if (ex && ex.sets.length > 0) {
       const bestE1rm = Math.max(
-        ...ex.sets
-          .filter((s) => s.completed)
-          .map((s) => s.weight * (1 + s.reps / 30)),
-        0
+        ...ex.sets.filter((s) => s.completed).map((s) => s.weight * (1 + s.reps / 30)),
+        0,
       );
       if (bestE1rm > 0) {
         progress.push({
-          date: session.date.split("T")[0],
+          date: session.date.split('T')[0],
           e1rm: Math.round(bestE1rm * 10) / 10,
         });
       }
@@ -330,7 +334,7 @@ export async function getEstimated1RM(
 export async function getMuscleGroupStats(
   exercises: Exercise[],
 ): Promise<{ muscle: string; volume: number }[]> {
-  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = await db.workoutSessions.where('completed').equals(1).toArray();
 
   const muscleData = new Map<string, number>();
 
@@ -362,7 +366,7 @@ export async function getWeeklySetVolume(
   startOfWeek.setHours(0, 0, 0, 0);
 
   // Use where completed = true then filter by date - consistent with other queries
-  const allSessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const allSessions = await db.workoutSessions.where('completed').equals(1).toArray();
   const sessions = allSessions.filter((s) => new Date(s.date) >= startOfWeek);
 
   const muscleSets = new Map<string, number>();
@@ -384,12 +388,12 @@ export async function getWeeklySetVolume(
 }
 
 export async function getWorkoutDensity(): Promise<{ date: string; count: number }[]> {
-  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = await db.workoutSessions.where('completed').equals(1).toArray();
 
   const densityMap = new Map<string, number>();
 
   for (const session of sessions) {
-    const date = session.date.split("T")[0];
+    const date = session.date.split('T')[0];
     densityMap.set(date, (densityMap.get(date) || 0) + 1);
   }
 
@@ -400,7 +404,7 @@ export async function getWorkoutDensity(): Promise<{ date: string; count: number
 }
 
 export async function getTotalStats() {
-  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = await db.workoutSessions.where('completed').equals(1).toArray();
 
   const validSessions = sessions.filter((s) => !s.isFreeze);
 
@@ -412,7 +416,7 @@ export async function getTotalStats() {
 }
 
 export async function getExerciseHistory(exerciseId: string) {
-  const sessions = await db.workoutSessions.where("completed").equals(true).toArray();
+  const sessions = await db.workoutSessions.where('completed').equals(1).toArray();
 
   const history = sessions
     .filter((s) => s.exercises.some((ex) => String(ex.exerciseId) === String(exerciseId)))
@@ -421,7 +425,8 @@ export async function getExerciseHistory(exerciseId: string) {
       const totalVolume = exercise.sets.reduce((acc, set) => acc + set.weight * set.reps, 0);
       const maxWeight = Math.max(...exercise.sets.map((s) => s.weight), 0);
       const bestSet = exercise.sets.reduce(
-        (best, current) => (current.weight * current.reps > best.weight * best.reps ? current : best),
+        (best, current) =>
+          current.weight * current.reps > best.weight * best.reps ? current : best,
         exercise.sets[0],
       );
 

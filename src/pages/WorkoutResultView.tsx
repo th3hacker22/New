@@ -1,30 +1,40 @@
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/Button";
-import { useNavigate } from "@tanstack/react-router";
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/Button';
+import { useNavigate } from '@tanstack/react-router';
 import {
-  Play, Save, RefreshCw, Activity, Target, Dumbbell,
-  Sparkles, Loader2, AlertTriangle, X, ChevronRight, Check
-} from "lucide-react";
+  Play,
+  Save,
+  RefreshCw,
+  Activity,
+  Target,
+  Dumbbell,
+  Sparkles,
+  Loader2,
+  AlertTriangle,
+  X,
+  ChevronRight,
+  Check,
+} from 'lucide-react';
 
-import { useGeneratorStore } from "@/store/useGeneratorStore";
-import { useExerciseStore } from "@/store/useExerciseStore";
-import { useWorkoutStore } from "@/store/useWorkoutStore";
-import { useToastStore } from "@/store/useToastStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { getExerciseName, getExerciseTarget } from "@/types/exercise";
-import AnatomyMap from "@/components/AnatomyMap";
-import { getMuscleIdsForExercise } from "@/utils/muscleMapper";
-import { getAlternativeExercises } from "@/services/exerciseService";
-import { generateProgram } from "@/services/workoutGenerator";
-import workoutVictoryImg from "@/assets/images/workout_victory_illustration_new_1784774047334.jpg";
+import { useGeneratorStore } from '@/store/useGeneratorStore';
+import { useExerciseStore } from '@/store/useExerciseStore';
+import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { useToastStore } from '@/store/useToastStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { getExerciseName, getExerciseTarget } from '@/types/exercise';
+import AnatomyMap from '@/components/AnatomyMap';
+import { getMuscleIdsForExercise } from '@/utils/muscleMapper';
+import { getAlternativeExercises } from '@/services/exerciseService';
+import { generateProgram } from '@/services/workoutGenerator';
+import workoutVictoryImg from '@/assets/images/workout_victory_illustration_new_1784774047334.jpg';
 
 function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(" ");
+  return classes.filter(Boolean).join(' ');
 }
 
 export default function WorkoutResultView() {
-  const isAr = useSettingsStore((s) => s.language === "ar");
+  const isAr = useSettingsStore((s) => s.language === 'ar');
   const profile = useGeneratorStore();
   const { exercises } = useExerciseStore();
   const startWorkout = useWorkoutStore((s) => s.startWorkout);
@@ -40,24 +50,21 @@ export default function WorkoutResultView() {
   const hasRoutine = !!profile.routine;
 
   const currentDay = hasProgram ? profile.program!.weeklyDays[activeDayIdx] : null;
-  const displayExercises = hasProgram ? currentDay!.exercises : (hasRoutine ? profile.routine!.exercises : []);
+  const displayExercises = hasProgram
+    ? currentDay!.exercises
+    : hasRoutine
+      ? profile.routine!.exercises
+      : [];
 
-  if (!hasProgram && !hasRoutine) {
-    return (
-      <div className="flex h-full items-center justify-center p-6 text-center">
-        <p className="text-text-muted">No routine found. Please generate one first.</p>
-      </div>
-    );
-  }
-
-  // Calculate highlighted muscles for the currently displayed day
+  // Calculate highlighted muscles for the currently displayed day.
+  // Must run before any early return to keep the hook order stable.
   const { highlightedMuscles, secondaryHighlightedMuscles } = useMemo(() => {
     const main = new Set<string>();
     const secondary = new Set<string>();
 
     displayExercises.forEach((item) => {
       const ms = getMuscleIdsForExercise(item.exercise.target, []);
-      const sec = getMuscleIdsForExercise("", item.exercise.secondaryMuscles);
+      const sec = getMuscleIdsForExercise('', item.exercise.secondaryMuscles);
       ms.forEach((m) => main.add(m));
       sec.forEach((m) => secondary.add(m));
     });
@@ -67,6 +74,14 @@ export default function WorkoutResultView() {
       secondaryHighlightedMuscles: Array.from(secondary),
     };
   }, [displayExercises]);
+
+  if (!hasProgram && !hasRoutine) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-center">
+        <p className="text-text-muted">No routine found. Please generate one first.</p>
+      </div>
+    );
+  }
 
   const uniqueMuscleCount = new Set([...highlightedMuscles, ...secondaryHighlightedMuscles]).size;
 
@@ -85,25 +100,25 @@ export default function WorkoutResultView() {
         }
       }
       setShufflingExIdx(null);
-    }, 400); 
+    }, 400);
   };
 
   const handleRegenerate = async () => {
     if (!hasProgram) return;
     setIsRegenerating(true);
-    await new Promise(r => setTimeout(r, 600)); // visual feel
+    await new Promise((r) => setTimeout(r, 600)); // visual feel
     profile.regenerateSeed();
     profile.setProgram(generateProgram(exercises, { ...profile, generatorSeed: Math.random() }));
     setIsRegenerating(false);
   };
 
   const handleStartWorkout = async () => {
-    const ids = displayExercises.map(e => e.exercise.id);
+    const ids = displayExercises.map((e) => e.exercise.id);
     try {
       const sessionId = await startWorkout(ids);
-      navigate({ to: "/workout/$sessionId", params: { sessionId } });
+      navigate({ to: '/workout/$sessionId', params: { sessionId } });
     } catch (e) {
-      useToastStore.getState().addToast("error", "Failed to start workout.");
+      useToastStore.getState().addToast('error', 'Failed to start workout.');
     }
   };
 
@@ -115,7 +130,6 @@ export default function WorkoutResultView() {
     >
       {/* LEFT COLUMN */}
       <div className="flex-1 space-y-6">
-        
         {/* Header & Meta */}
         <div className="space-y-3">
           <div className="relative w-full h-32 md:h-36 rounded-2xl overflow-hidden border border-border/60 shadow-xl group">
@@ -127,13 +141,15 @@ export default function WorkoutResultView() {
             />
             <div className="absolute inset-0 bg-gradient-to-r from-bg-surface/90 via-bg-surface/60 to-transparent flex flex-col justify-center p-5">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/20 border border-primary/30 px-2.5 py-0.5 rounded-md self-start mb-1 backdrop-blur-md">
-                {isAr ? "برنامج تدريبي مخصص 3D" : "3D GENERATED PROGRAM"}
+                {isAr ? 'برنامج تدريبي مخصص 3D' : '3D GENERATED PROGRAM'}
               </span>
               <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-text-primary">
-                {hasProgram ? profile.program!.title : "Generated Routine"}
+                {hasProgram ? profile.program!.title : 'Generated Routine'}
               </h1>
               <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md line-clamp-2">
-                {hasProgram ? profile.program!.summary : "Review and fine-tune your personalized workout routine."}
+                {hasProgram
+                  ? profile.program!.summary
+                  : 'Review and fine-tune your personalized workout routine.'}
               </p>
             </div>
           </div>
@@ -142,14 +158,19 @@ export default function WorkoutResultView() {
         {/* Warnings */}
         {hasProgram && profile.program!.warnings.length > 0 && !dismissedWarnings && (
           <div className="relative p-4 rounded-xl border border-warning/30 bg-warning/10 text-sm">
-            <button onClick={() => setDismissedWarnings(true)} className="absolute top-3 right-3 text-warning/70 hover:text-warning">
+            <button
+              onClick={() => setDismissedWarnings(true)}
+              className="absolute top-3 right-3 text-warning/70 hover:text-warning"
+            >
               <X className="w-4 h-4" />
             </button>
             <div className="flex gap-2 text-warning font-bold items-center mb-2 uppercase tracking-wide text-xs">
               <AlertTriangle className="w-4 h-4" /> Important Constraints
             </div>
             <ul className="list-disc pl-5 space-y-1 text-warning/90 font-medium">
-              {profile.program!.warnings.map((w, i) => <li key={i}>{w}</li>)}
+              {profile.program!.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
             </ul>
           </div>
         )}
@@ -162,10 +183,10 @@ export default function WorkoutResultView() {
                 key={idx}
                 onClick={() => setActiveDayIdx(idx)}
                 className={cn(
-                  "px-4 py-3 rounded-t-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border-b-2",
-                  activeDayIdx === idx 
-                    ? "border-primary text-primary bg-primary/5" 
-                    : "border-transparent text-text-muted hover:text-text-primary hover:bg-bg-elevated/50"
+                  'px-4 py-3 rounded-t-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border-b-2',
+                  activeDayIdx === idx
+                    ? 'border-primary text-primary bg-primary/5'
+                    : 'border-transparent text-text-muted hover:text-text-primary hover:bg-bg-elevated/50',
                 )}
               >
                 Day {idx + 1}
@@ -198,7 +219,11 @@ export default function WorkoutResultView() {
                   className="glass-card flex items-stretch gap-4 rounded-2xl border border-border p-3 shadow-lg"
                 >
                   <div className="h-[80px] w-[80px] shrink-0 overflow-hidden rounded-xl bg-white mt-1">
-                    <img src={item.exercise.gifUrl} alt={item.exercise.name} className="h-full w-full object-cover mix-blend-multiply" />
+                    <img
+                      src={item.exercise.gifUrl}
+                      alt={item.exercise.name}
+                      className="h-full w-full object-cover mix-blend-multiply"
+                    />
                   </div>
 
                   <div className="flex flex-col min-w-0 flex-1 justify-center">
@@ -206,27 +231,36 @@ export default function WorkoutResultView() {
                       <div className="min-w-0">
                         {hasProgram && (
                           <span className="text-[9px] font-black uppercase tracking-widest text-primary/80 mb-0.5 block">
-                            {'role' in item ? (item as any).role : "Exercise"}
+                            {'role' in item ? (item as any).role : 'Exercise'}
                           </span>
                         )}
                         <h3 className="truncate text-sm md:text-base font-bold text-text-primary capitalize leading-tight">
                           {getExerciseName(item.exercise, isAr)}
                         </h3>
                       </div>
-                      
+
                       <button
                         onClick={() => handleShuffle(i, item.exercise.id)}
                         disabled={shufflingExIdx === i}
                         className="group shrink-0 p-2 rounded-lg bg-bg-elevated/50 text-text-muted hover:bg-bg-elevated hover:text-text-primary transition-colors disabled:opacity-50"
                       >
-                        <RefreshCw className={cn("h-4 w-4", shufflingExIdx === i && "animate-spin text-primary")} />
+                        <RefreshCw
+                          className={cn(
+                            'h-4 w-4',
+                            shufflingExIdx === i && 'animate-spin text-primary',
+                          )}
+                        />
                       </button>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[11px] font-bold uppercase tracking-wider text-text-muted">
-                      <span className="text-primary-light">{getExerciseTarget(item.exercise, isAr)}</span>
+                      <span className="text-primary-light">
+                        {getExerciseTarget(item.exercise, isAr)}
+                      </span>
                       <span className="opacity-30">•</span>
-                      <span>{item.sets} Sets × {item.reps}</span>
+                      <span>
+                        {item.sets} Sets × {item.reps}
+                      </span>
                       {item.restSeconds ? (
                         <>
                           <span className="opacity-30">•</span>
@@ -255,11 +289,14 @@ export default function WorkoutResultView() {
 
         {hasProgram && (
           <div className="bg-bg-elevated/40 border border-border rounded-xl p-4 mt-6">
-             <h3 className="text-xs font-bold text-text-muted uppercase tracking-widest mb-1">Progression Model</h3>
-             <p className="text-sm font-medium text-text-secondary leading-relaxed">{profile.program!.progressionModel}</p>
+            <h3 className="text-xs font-bold text-text-muted uppercase tracking-widest mb-1">
+              Progression Model
+            </h3>
+            <p className="text-sm font-medium text-text-secondary leading-relaxed">
+              {profile.program!.progressionModel}
+            </p>
           </div>
         )}
-
       </div>
 
       {/* RIGHT COLUMN */}
@@ -282,66 +319,76 @@ export default function WorkoutResultView() {
 
           <div className="relative z-10">
             <div className="mb-6 flex items-center justify-between border-b border-border/50 pb-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary">
-                <Target className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black uppercase italic tracking-tight text-text-primary">
-                  {hasProgram ? currentDay!.name : "Session"}
-                </h2>
-                <p className="text-xs font-semibold text-text-muted">
-                  {uniqueMuscleCount} Muscle groups
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black uppercase italic tracking-tight text-text-primary">
+                    {hasProgram ? currentDay!.name : 'Session'}
+                  </h2>
+                  <p className="text-xs font-semibold text-text-muted">
+                    {uniqueMuscleCount} Muscle groups
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Compact Anatomy Map */}
-          <div className="mb-6 rounded-3xl bg-bg-elevated/30 p-2 border border-border/50 min-h-[300px]">
-             <h3 className="text-center text-[10px] font-bold text-text-muted tracking-widest uppercase mb-2">Day {activeDayIdx + 1} Targets</h3>
-            <AnatomyMap
-              readOnly
-              highlightedMuscles={highlightedMuscles}
-              secondaryHighlightedMuscles={secondaryHighlightedMuscles}
-            />
-          </div>
+            {/* Compact Anatomy Map */}
+            <div className="mb-6 rounded-3xl bg-bg-elevated/30 p-2 border border-border/50 min-h-[300px]">
+              <h3 className="text-center text-[10px] font-bold text-text-muted tracking-widest uppercase mb-2">
+                Day {activeDayIdx + 1} Targets
+              </h3>
+              <AnatomyMap
+                readOnly
+                highlightedMuscles={highlightedMuscles}
+                secondaryHighlightedMuscles={secondaryHighlightedMuscles}
+              />
+            </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-3">
-            <Button
-              className="w-full py-4 text-sm font-black uppercase tracking-wider"
-              variant="primary"
-              onClick={handleStartWorkout}
-            >
-              <Play className="h-5 w-5 fill-black" /> Start Day {activeDayIdx + 1}
-            </Button>
-            
-            <div className="flex gap-2">
-              <Button 
-                variant="ghost"
-                className="w-full py-4 text-xs font-bold uppercase tracking-wider bg-bg-elevated/50 text-text-secondary hover:text-text-primary"
-                icon={<Save className="h-3.5 w-3.5" />}
-                onClick={() => {
-                  useToastStore.getState().addToast("success", "Saved this day to your routines.");
-                }}
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full py-4 text-sm font-black uppercase tracking-wider"
+                variant="primary"
+                onClick={handleStartWorkout}
               >
-                Save
+                <Play className="h-5 w-5 fill-black" /> Start Day {activeDayIdx + 1}
               </Button>
 
-              {hasProgram && (
-                <Button 
-                  variant="outline"
-                  onClick={handleRegenerate}
-                  disabled={isRegenerating}
-                  className="w-full py-4 text-xs font-bold uppercase tracking-wider border-border/50"
-                  icon={isRegenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  className="w-full py-4 text-xs font-bold uppercase tracking-wider bg-bg-elevated/50 text-text-secondary hover:text-text-primary"
+                  icon={<Save className="h-3.5 w-3.5" />}
+                  onClick={() => {
+                    useToastStore
+                      .getState()
+                      .addToast('success', 'Saved this day to your routines.');
+                  }}
                 >
-                  {isRegenerating ? "Regen..." : "Regen"}
+                  Save
                 </Button>
-              )}
+
+                {hasProgram && (
+                  <Button
+                    variant="outline"
+                    onClick={handleRegenerate}
+                    disabled={isRegenerating}
+                    className="w-full py-4 text-xs font-bold uppercase tracking-wider border-border/50"
+                    icon={
+                      isRegenerating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )
+                    }
+                  >
+                    {isRegenerating ? 'Regen...' : 'Regen'}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
           </div>
         </motion.div>
       </div>
