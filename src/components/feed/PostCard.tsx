@@ -207,6 +207,7 @@ export function PostCard({
               src={img}
               alt=""
               loading="lazy"
+              decoding="async"
               className={cn(
                 'w-full object-cover aspect-square hover:scale-105 transition-transform duration-500',
                 post.images!.length === 3 && i === 0 ? 'col-span-2 aspect-video' : '',
@@ -456,6 +457,8 @@ function WorkoutBlock({
                 <img
                   src={ex.imageUrl}
                   alt={ex.exerciseName}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover opacity-80 group-hover:opacity-100"
                   referrerPolicy="no-referrer"
                 />

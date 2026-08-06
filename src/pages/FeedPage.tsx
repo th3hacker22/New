@@ -9,8 +9,7 @@ import emptyWorkoutImg from '@/assets/images/empty_workout_illustration_new_1784
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { socialService, type PublicProfile } from '@/services/socialService';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import { getStorageInstance } from "@/lib/firebase";
 import { useToastStore } from '@/store/useToastStore';
 import { workoutRepository, type WorkoutSession } from '@/db';
 import { cn } from '@/utils/cn';
@@ -136,12 +135,12 @@ export default function FeedPage() {
     setIsPosting(true);
     try {
       const imageUrls: string[] = [];
-      if (storage) {
-        for (const file of data.images) {
-          const r = ref(storage, `feed/${user.uid}/post_${Date.now()}_${file.name}`);
-          await uploadBytes(r, file);
-          imageUrls.push(await getDownloadURL(r));
-        }
+      const storage = await getStorageInstance();
+      const { ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
+      for (const file of data.images) {
+        const r = ref(storage, `feed/${user.uid}/post_${Date.now()}_${file.name}`);
+        await uploadBytes(r, file);
+        imageUrls.push(await getDownloadURL(r));
       }
 
       const payload: Record<string, unknown> = {

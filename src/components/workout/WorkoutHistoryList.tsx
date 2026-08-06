@@ -424,6 +424,7 @@ export default function WorkoutHistoryList({ isAr = false }: WorkoutHistoryListP
                   transition={{ delay: Math.min(sIdx * 0.05, 0.4) }}
                   className={cn(
                     'rounded-2xl border bg-bg-surface/40 hover:bg-bg-surface-hover/20 transition-all overflow-hidden flex flex-col',
+                    'content-visibility-auto [contain-intrinsic-size:0_80px]',
                     isExpanded
                       ? 'border-primary/20 shadow-lg shadow-primary/5'
                       : 'border-border/40',

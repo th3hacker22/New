@@ -19,8 +19,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSocialStore } from '@/store/useSocialStore';
 import { signOut, updateProfile, User as FirebaseUser } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, storage as firebaseStorage } from '@/lib/firebase';
+import { auth, getStorageInstance } from '@/lib/firebase';
 import { storage as appStorage } from '@/lib/storage';
 import { pushToCloud } from '@/lib/syncEngine';
 import { useAchievementsStore } from '@/store/useAchievementsStore';
@@ -142,10 +141,12 @@ export default function ProfilePage() {
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user || isGuest || !firebaseStorage) return;
+    if (!file || !user || isGuest) return;
 
     setIsUploading(true);
     try {
+      const firebaseStorage = await getStorageInstance();
+      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
       const storageRef = ref(firebaseStorage, `profiles/${user.uid}/avatar_${Date.now()}`);
       await uploadBytes(storageRef, file);
       const photoURL = await getDownloadURL(storageRef);
