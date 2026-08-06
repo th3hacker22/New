@@ -1,11 +1,11 @@
-import { create } from "zustand";
-import type { Exercise } from "@/types/exercise";
+import { create } from 'zustand';
+import type { Exercise } from '@/types/exercise';
 import {
   fetchExercisesFromGitHub,
   filterExercises,
   type ExerciseFilters,
-} from "@/services/exerciseService";
-import { db } from "@/db";
+} from '@/services/exerciseService';
+import { exerciseCatalogRepository } from '@/db';
 
 interface ExerciseState {
   // Data
@@ -47,10 +47,10 @@ export const useExerciseStore = create<ExerciseState>((set, get) => ({
 
     try {
       // 1. Try to load from IndexedDB first
-      const count = await db.exercises_v2.count();
+      const count = await exerciseCatalogRepository.count();
       if (count > 0) {
-        console.log("Loading exercises from IndexedDB database...");
-        const exercises = await db.exercises_v2.toArray();
+        console.info('Loading exercises from IndexedDB database...');
+        const exercises = await exerciseCatalogRepository.list();
         set({
           exercises,
           filteredExercises: exercises,
@@ -66,12 +66,10 @@ export const useExerciseStore = create<ExerciseState>((set, get) => ({
       if (exercises && exercises.length > 0) {
         try {
           // Add to DB bulk
-          await db.exercises_v2.bulkPut(exercises);
-          console.log(
-            `Seeded ${exercises.length} exercises into IndexedDB database.`,
-          );
+          await exerciseCatalogRepository.bulkPut(exercises);
+          console.info(`Seeded ${exercises.length} exercises into IndexedDB database.`);
         } catch (dbError) {
-          console.error("Failed to seed exercises to IndexedDB:", dbError);
+          console.error('Failed to seed exercises to IndexedDB:', dbError);
         }
       }
 
@@ -82,15 +80,15 @@ export const useExerciseStore = create<ExerciseState>((set, get) => ({
       });
     } catch (error) {
       set({
-        error: "Failed to load exercises. Please try again.",
+        error: 'Failed to load exercises. Please try again.',
         isLoading: false,
       });
     }
   },
 
   loadFavorites: async () => {
-    const favorites = await db.favoriteExercises.toArray();
-    set({ favoriteIds: favorites.map((f) => f.id) });
+    const favoriteIds = await exerciseCatalogRepository.listFavoriteIds();
+    set({ favoriteIds });
   },
 
   setFilter: (key, value) => {

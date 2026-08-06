@@ -1,28 +1,25 @@
-import { storage } from "@/lib/storage";
-import { useEffect, useState, useDeferredValue, useRef, useCallback } from "react";
-import { Link } from "@tanstack/react-router";
-import { motion, useReducedMotion } from "framer-motion";
-import { Search, Dumbbell, ChevronRight, Loader2, X, Heart } from "lucide-react";
-import { DataEmptyState } from "@/components/ui/DataEmptyState";
-import { Button } from "@/components/ui/Button";
-import { cn } from "@/utils/cn";
-import { useExerciseStore } from "@/store/useExerciseStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { getExerciseName, getExerciseBodyPart, getExerciseEquipment, getExerciseTarget } from "@/types/exercise";
-import { SkeletonExerciseGrid } from "@/components/ui/Skeleton";
-import AnatomyMap from "@/components/AnatomyMap";
-import exerciseLibraryImg from "@/assets/images/exercise_library_illustration_new_1784774057295.jpg";
+import { storage } from '@/lib/storage';
+import { useEffect, useState, useDeferredValue, useRef, useCallback } from 'react';
+import { Link } from '@tanstack/react-router';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Search, Dumbbell, ChevronRight, Loader2, X, Heart } from 'lucide-react';
+import { DataEmptyState } from '@/components/ui/DataEmptyState';
+import { Button } from '@/components/ui/Button';
+import { cn } from '@/utils/cn';
+import { useExerciseStore } from '@/store/useExerciseStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import {
+  getExerciseName,
+  getExerciseBodyPart,
+  getExerciseEquipment,
+  getExerciseTarget,
+} from '@/types/exercise';
+import { SkeletonExerciseGrid } from '@/components/ui/Skeleton';
+import AnatomyMap from '@/components/AnatomyMap';
+import exerciseLibraryImg from '@/assets/images/exercise_library_illustration_new_1784774057295.jpg';
 
 // ── Custom Image Component ──
-function ExerciseImage({
-  src,
-  alt,
-  equipment,
-}: {
-  src: string;
-  alt: string;
-  equipment: string;
-}) {
+function ExerciseImage({ src, alt, equipment }: { src: string; alt: string; equipment: string }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
@@ -41,9 +38,9 @@ function ExerciseImage({
         onLoad={() => setIsLoaded(true)}
         onError={() => setHasError(true)}
         className={cn(
-          "h-full w-full object-cover transition-all duration-500 group-hover:scale-105 bg-white",
-          isLoaded ? "opacity-100" : "opacity-0",
-          hasError && "hidden",
+          'h-full w-full object-cover transition-all duration-500 group-hover:scale-105 bg-white',
+          isLoaded ? 'opacity-100' : 'opacity-0',
+          hasError && 'hidden',
         )}
       />
       {hasError && (
@@ -80,18 +77,11 @@ const itemVariants = {
 
 export default function ExercisesPage() {
   const { language } = useSettingsStore();
-  const isAr = language === "ar";
-  const {
-    exercises,
-    filteredExercises,
-    isLoading,
-    error,
-    filters,
-    loadExercises,
-    setFilter,
-  } = useExerciseStore();
+  const isAr = language === 'ar';
+  const { exercises, filteredExercises, isLoading, error, filters, loadExercises, setFilter } =
+    useExerciseStore();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const deferredQuery = useDeferredValue(searchQuery);
   const [visibleCount, setVisibleCount] = useState(30);
   const prefersReducedMotion = useReducedMotion();
@@ -102,29 +92,33 @@ export default function ExercisesPage() {
   useEffect(() => {
     loadExercises();
     try {
-      const saved = storage.getString("recentSearches" as any, "");
+      const saved = storage.getString('recentSearches' as any, '');
       if (saved) setRecentSearches(JSON.parse(saved));
-    } catch (e) {}
+    } catch (e) {
+      console.warn('recent search storage failed', e);
+    }
   }, [loadExercises]);
 
   const addRecentSearch = (query: string) => {
     if (!query.trim()) return;
-    const nextSearches = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
+    const nextSearches = [query, ...recentSearches.filter((s) => s !== query)].slice(0, 5);
     setRecentSearches(nextSearches);
     try {
-      storage.set("recentSearches" as any, JSON.stringify(nextSearches as any));
-    } catch (e) {}
+      storage.set('recentSearches' as any, JSON.stringify(nextSearches as any));
+    } catch (e) {
+      console.warn('recent search storage failed', e);
+    }
   };
 
   const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       addRecentSearch(searchQuery);
     }
   };
 
   // Update search filter when deferredQuery changes (debounced by useDeferredValue)
   useEffect(() => {
-    setFilter("search", deferredQuery);
+    setFilter('search', deferredQuery);
     setVisibleCount(30); // Reset visible count on search
   }, [deferredQuery, setFilter]);
 
@@ -138,19 +132,16 @@ export default function ExercisesPage() {
       observerRef.current = new IntersectionObserver(
         (entries) => {
           if (entries[0].isIntersecting) {
-            setVisibleCount((prev) =>
-              Math.min(prev + 30, filteredExercises.length),
-            );
+            setVisibleCount((prev) => Math.min(prev + 30, filteredExercises.length));
           }
         },
-        { rootMargin: "200px" } // Prefetch early
+        { rootMargin: '200px' }, // Prefetch early
       );
 
       if (node) observerRef.current.observe(node);
     },
-    [isLoading, filteredExercises.length]
+    [isLoading, filteredExercises.length],
   );
-
 
   // ── Loading State ──
   if (isLoading) {
@@ -158,16 +149,16 @@ export default function ExercisesPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-xl font-bold text-text-primary uppercase tracking-wider">
-            {isAr ? "مكتبة التمارين" : "Exercise Library"}
+            {isAr ? 'مكتبة التمارين' : 'Exercise Library'}
           </h1>
           <p className="mt-1 text-sm text-text-secondary">
-            {isAr ? "جاري تحميل التمارين..." : "Loading exercises..."}
+            {isAr ? 'جاري تحميل التمارين...' : 'Loading exercises...'}
           </p>
         </div>
         <div className="flex items-center justify-center gap-2 py-8">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <span className="text-sm text-text-muted">
-            {isAr ? "تحميل أكثر من ١٣٠٠ تمرين..." : "Loading 1300+ exercises..."}
+            {isAr ? 'تحميل أكثر من ١٣٠٠ تمرين...' : 'Loading 1300+ exercises...'}
           </span>
         </div>
         <SkeletonExerciseGrid />
@@ -182,11 +173,7 @@ export default function ExercisesPage() {
         <Dumbbell className="h-16 w-16 text-text-muted" />
         <p className="text-lg font-bold text-text-primary">An Error Occurred</p>
         <p className="text-sm text-text-muted">{error}</p>
-        <Button
-          onClick={() => loadExercises()}
-          variant="primary"
-          size="sm"
-        >
+        <Button onClick={() => loadExercises()} variant="primary" size="sm">
           Try Again
         </Button>
       </div>
@@ -205,13 +192,16 @@ export default function ExercisesPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-bg-surface/90 via-bg-surface/60 to-transparent flex flex-col justify-center p-5">
           <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/20 border border-primary/30 px-2.5 py-0.5 rounded-md self-start mb-1 backdrop-blur-md">
-            {isAr ? "مكتبة احترافية 3D" : "3D EXERCISE ENGINE"}
+            {isAr ? 'مكتبة احترافية 3D' : '3D EXERCISE ENGINE'}
           </span>
           <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-text-primary">
-            {isAr ? "مكتبة التمارين الشاملة" : "Exercise Library"}
+            {isAr ? 'مكتبة التمارين الشاملة' : 'Exercise Library'}
           </h1>
           <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md">
-            {exercises.length}+ {isAr ? "تمرين بالحركات والصور التوضيحية" : "exercises with animated guide gifs and target muscle maps"}
+            {exercises.length}+{' '}
+            {isAr
+              ? 'تمرين بالحركات والصور التوضيحية'
+              : 'exercises with animated guide gifs and target muscle maps'}
           </p>
         </div>
       </div>
@@ -222,7 +212,7 @@ export default function ExercisesPage() {
           <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
-            placeholder={isAr ? "ابحث عن التمارين..." : "Search exercises... (e.g., bench press)"}
+            placeholder={isAr ? 'ابحث عن التمارين...' : 'Search exercises... (e.g., bench press)'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
@@ -231,11 +221,11 @@ export default function ExercisesPage() {
             className="w-full rounded-[--radius-card] border border-border bg-bg-card py-3 pl-4 pr-12 text-sm text-text-primary placeholder-text-muted outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
           />
         </div>
-        
+
         {isSearchFocused && !searchQuery && recentSearches.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-bg-elevated border border-border rounded-xl shadow-lg overflow-hidden py-2">
             <div className="px-4 py-2 text-xs font-bold text-text-muted uppercase tracking-wider">
-              {isAr ? "عمليات البحث الأخيرة" : "Recent Searches"}
+              {isAr ? 'عمليات البحث الأخيرة' : 'Recent Searches'}
             </div>
             {recentSearches.map((search) => (
               <button
@@ -257,44 +247,57 @@ export default function ExercisesPage() {
       {/* ── Quick Filter Chips ── */}
       <div className="flex overflow-x-auto pb-2 -mx-4 px-4 gap-2 no-scrollbar">
         <button
-          onClick={() => setFilter("favoritesOnly", !filters.favoritesOnly)}
+          onClick={() => setFilter('favoritesOnly', !filters.favoritesOnly)}
           className={cn(
-            "flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all border",
+            'flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all border',
             filters.favoritesOnly
-              ? "bg-danger text-white border-danger shadow-[0_0_12px_rgba(239,68,68,0.4)]"
-              : "bg-bg-elevated text-text-secondary border-border hover:border-danger/30 hover:text-danger"
+              ? 'bg-danger text-white border-danger shadow-[0_0_12px_rgba(239,68,68,0.4)]'
+              : 'bg-bg-elevated text-text-secondary border-border hover:border-danger/30 hover:text-danger',
           )}
         >
-          <Heart className={cn("h-3.5 w-3.5", filters.favoritesOnly && "fill-current")} />
-          {isAr ? "المفضلة" : "Favorites"}
+          <Heart className={cn('h-3.5 w-3.5', filters.favoritesOnly && 'fill-current')} />
+          {isAr ? 'المفضلة' : 'Favorites'}
         </button>
 
         <div className="w-px h-8 bg-border/50 self-center mx-1" />
 
         <button
-          onClick={() => setFilter("bodyPart", "all")}
+          onClick={() => setFilter('bodyPart', 'all')}
           className={cn(
-            "whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border",
-            (!filters.bodyPart || filters.bodyPart === "all")
-              ? "bg-primary text-primary-text border-primary shadow-[0_0_12px_rgba(204,255,0,0.3)]"
-              : "bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary"
+            'whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border',
+            !filters.bodyPart || filters.bodyPart === 'all'
+              ? 'bg-primary text-primary-text border-primary shadow-[0_0_12px_rgba(204,255,0,0.3)]'
+              : 'bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary',
           )}
         >
-          {isAr ? "كل العضلات" : "All Muscles"}
+          {isAr ? 'كل العضلات' : 'All Muscles'}
         </button>
-        {["chest", "back", "shoulders", "upper arms", "lower arms", "waist", "upper legs", "lower legs", "cardio", "neck"].map(part => {
-          const isActive = Array.isArray(filters.bodyPart) ? filters.bodyPart.includes(part) : filters.bodyPart === part;
+        {[
+          'chest',
+          'back',
+          'shoulders',
+          'upper arms',
+          'lower arms',
+          'waist',
+          'upper legs',
+          'lower legs',
+          'cardio',
+          'neck',
+        ].map((part) => {
+          const isActive = Array.isArray(filters.bodyPart)
+            ? filters.bodyPart.includes(part)
+            : filters.bodyPart === part;
           return (
             <button
               key={part}
               onClick={() => {
-                setFilter("bodyPart", part);
+                setFilter('bodyPart', part);
               }}
               className={cn(
-                "whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border",
+                'whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border',
                 isActive
-                  ? "bg-primary/20 text-primary border-primary/50 shadow-[0_0_12px_rgba(204,255,0,0.1)]"
-                  : "bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary"
+                  ? 'bg-primary/20 text-primary border-primary/50 shadow-[0_0_12px_rgba(204,255,0,0.1)]'
+                  : 'bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary',
               )}
             >
               {part}
@@ -305,105 +308,115 @@ export default function ExercisesPage() {
 
       <div className="flex overflow-x-auto pb-2 -mx-4 px-4 gap-2 no-scrollbar">
         <button
-          onClick={() => setFilter("equipment", "all")}
+          onClick={() => setFilter('equipment', 'all')}
           className={cn(
-            "whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border",
-            (!filters.equipment || filters.equipment === "all")
-              ? "bg-bg-surface-hover text-text-primary border-border"
-              : "bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary"
+            'whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border',
+            !filters.equipment || filters.equipment === 'all'
+              ? 'bg-bg-surface-hover text-text-primary border-border'
+              : 'bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary',
           )}
         >
           All Eqp
         </button>
-        {["barbell", "dumbbell", "cable", "machine", "body weight", "kettlebell", "band"].map(eq => {
-          const isActive = filters.equipment === eq;
-          return (
-            <button
-              key={eq}
-              onClick={() => {
-                setFilter("equipment", isActive ? "all" : eq);
-              }}
-              className={cn(
-                "whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border",
-                isActive
-                  ? "bg-bg-surface-hover text-text-primary border-border shadow-sm"
-                  : "bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary"
-              )}
-            >
-              {eq}
-            </button>
-          );
-        })}
+        {['barbell', 'dumbbell', 'cable', 'machine', 'body weight', 'kettlebell', 'band'].map(
+          (eq) => {
+            const isActive = filters.equipment === eq;
+            return (
+              <button
+                key={eq}
+                onClick={() => {
+                  setFilter('equipment', isActive ? 'all' : eq);
+                }}
+                className={cn(
+                  'whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors border',
+                  isActive
+                    ? 'bg-bg-surface-hover text-text-primary border-border shadow-sm'
+                    : 'bg-bg-elevated text-text-secondary border-border hover:border-border-active hover:text-text-primary',
+                )}
+              >
+                {eq}
+              </button>
+            );
+          },
+        )}
       </div>
 
       {/* ── Anatomy Filter ── */}
       {(() => {
         const mapping: Record<string, string> = {
           // Chest
-          "upper-chest": "chest",
-          "mid-lower-chest": "chest",
+          'upper-chest': 'chest',
+          'mid-lower-chest': 'chest',
           // Shoulders
-          "front-delt": "shoulders",
-          "lateral-delt": "shoulders",
-          "post-delt": "shoulders",
-          "lat-delt-back": "shoulders",
+          'front-delt': 'shoulders',
+          'lateral-delt': 'shoulders',
+          'post-delt': 'shoulders',
+          'lat-delt-back': 'shoulders',
           // Back
-          "lower-back": "back",
-          lats: "back",
-          "traps-mid": "back",
-          "lower-traps": "back",
+          'lower-back': 'back',
+          lats: 'back',
+          'traps-mid': 'back',
+          'lower-traps': 'back',
           // Arms
-          "biceps-long": "upper arms",
-          "biceps-short": "upper arms",
-          "triceps-long": "upper arms",
-          "triceps-lat": "upper arms",
-          "triceps-med": "upper arms",
-          "forearm-ext": "lower arms",
-          "forearm-flex": "lower arms",
-          "forearm-ext-back": "lower arms",
-          "forearm-flex-back": "lower arms",
+          'biceps-long': 'upper arms',
+          'biceps-short': 'upper arms',
+          'triceps-long': 'upper arms',
+          'triceps-lat': 'upper arms',
+          'triceps-med': 'upper arms',
+          'forearm-ext': 'lower arms',
+          'forearm-flex': 'lower arms',
+          'forearm-ext-back': 'lower arms',
+          'forearm-flex-back': 'lower arms',
           // Waist/Abs
-          "upper-abs": "waist",
-          "lower-abs": "waist",
-          obliques: "waist",
+          'upper-abs': 'waist',
+          'lower-abs': 'waist',
+          obliques: 'waist',
           // Legs
-          "outer-quad": "upper legs",
-          "rectus-femoris": "upper legs",
-          vmo: "upper legs",
-          adductors: "upper legs",
-          "lateral-ham": "upper legs",
-          "medial-ham": "upper legs",
-          "glute-max": "upper legs",
-          "glute-med": "upper legs",
-          gastrocnemius: "lower legs",
-          tibialis: "lower legs",
-          soleus: "lower legs",
-          "gastrocnemius-back": "lower legs",
-          "soleus-back": "lower legs",
+          'outer-quad': 'upper legs',
+          'rectus-femoris': 'upper legs',
+          vmo: 'upper legs',
+          adductors: 'upper legs',
+          'lateral-ham': 'upper legs',
+          'medial-ham': 'upper legs',
+          'glute-max': 'upper legs',
+          'glute-med': 'upper legs',
+          gastrocnemius: 'lower legs',
+          tibialis: 'lower legs',
+          soleus: 'lower legs',
+          'gastrocnemius-back': 'lower legs',
+          'soleus-back': 'lower legs',
           // Misc
-          neck: "neck",
-          "neck-back": "neck",
-          "upper-traps": "neck",
-          "traps-back": "neck",
+          neck: 'neck',
+          'neck-back': 'neck',
+          'upper-traps': 'neck',
+          'traps-back': 'neck',
         };
 
-        const activeBodyParts = Array.isArray(filters.bodyPart) 
-          ? filters.bodyPart 
-          : (filters.bodyPart && filters.bodyPart !== "all" ? [filters.bodyPart] : []);
+        const activeBodyParts = Array.isArray(filters.bodyPart)
+          ? filters.bodyPart
+          : filters.bodyPart && filters.bodyPart !== 'all'
+            ? [filters.bodyPart]
+            : [];
 
-        const highlightedIds = Object.keys(mapping).filter(id => activeBodyParts.includes(mapping[id]));
+        const highlightedIds = Object.keys(mapping).filter((id) =>
+          activeBodyParts.includes(mapping[id]),
+        );
 
         return (
           <AnatomyMap
             highlightedMuscles={highlightedIds}
             onMuscleSelect={(id, selectedIds) => {
-              if (id === "all" || selectedIds.length === 0) {
-                setFilter("bodyPart", "all");
+              if (id === 'all' || selectedIds.length === 0) {
+                setFilter('bodyPart', 'all');
               } else {
-                const validBodyParts = Array.from(new Set(selectedIds.map(sid => mapping[sid] || sid)));
-                setFilter("bodyPart", validBodyParts);
+                const validBodyParts = Array.from(
+                  new Set(selectedIds.map((sid) => mapping[sid] || sid)),
+                );
+                setFilter('bodyPart', validBodyParts);
                 setTimeout(() => {
-                  document.getElementById("exercise-results")?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  document
+                    .getElementById('exercise-results')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 100);
               }
             }}
@@ -418,37 +431,48 @@ export default function ExercisesPage() {
             {filteredExercises.length} Exercises
           </p>
         </div>
-        
-        {((filters.bodyPart && filters.bodyPart !== "all") || (filters.equipment && filters.equipment !== "all")) && (
-          <div className="flex flex-wrap items-center gap-2 sticky top-4 z-40 bg-bg-card/90 backdrop-blur-md py-2 border border-border shadow-md rounded-[--radius-button] px-3">
-            <span className="text-[10px] text-text-muted flex items-center font-bold tracking-widest uppercase">Showing:</span>
-            
-            {filters.bodyPart && filters.bodyPart !== "all" && 
-              (Array.isArray(filters.bodyPart) ? filters.bodyPart : [filters.bodyPart]).map(bp => (
-              <span key={bp} className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded flex items-center gap-1 font-bold uppercase tracking-wider">
-                {bp}
-                <button 
-                  className="hover:text-text-primary ml-0.5"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const currentArray = Array.isArray(filters.bodyPart) ? filters.bodyPart : [filters.bodyPart];
-                    const nextArray = currentArray.filter(p => p !== bp);
-                    setFilter("bodyPart", nextArray.length > 0 ? nextArray : "all");
-                  }}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
 
-            {filters.equipment && filters.equipment !== "all" && (
+        {((filters.bodyPart && filters.bodyPart !== 'all') ||
+          (filters.equipment && filters.equipment !== 'all')) && (
+          <div className="flex flex-wrap items-center gap-2 sticky top-4 z-40 bg-bg-card/90 backdrop-blur-md py-2 border border-border shadow-md rounded-[--radius-button] px-3">
+            <span className="text-[10px] text-text-muted flex items-center font-bold tracking-widest uppercase">
+              Showing:
+            </span>
+
+            {filters.bodyPart &&
+              filters.bodyPart !== 'all' &&
+              (Array.isArray(filters.bodyPart) ? filters.bodyPart : [filters.bodyPart]).map(
+                (bp) => (
+                  <span
+                    key={bp}
+                    className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded flex items-center gap-1 font-bold uppercase tracking-wider"
+                  >
+                    {bp}
+                    <button
+                      className="hover:text-text-primary ml-0.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const currentArray = Array.isArray(filters.bodyPart)
+                          ? filters.bodyPart
+                          : [filters.bodyPart];
+                        const nextArray = currentArray.filter((p) => p !== bp);
+                        setFilter('bodyPart', nextArray.length > 0 ? nextArray : 'all');
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ),
+              )}
+
+            {filters.equipment && filters.equipment !== 'all' && (
               <span className="text-[10px] bg-bg-surface-hover text-text-primary border border-border px-2 py-0.5 rounded flex items-center gap-1 font-bold uppercase tracking-wider">
                 {filters.equipment}
-                <button 
+                <button
                   className="hover:text-text-primary ml-0.5"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setFilter("equipment", "all");
+                    setFilter('equipment', 'all');
                   }}
                 >
                   <X className="w-3 h-3" />
@@ -456,12 +480,12 @@ export default function ExercisesPage() {
               </span>
             )}
 
-            <button 
+            <button
               className="text-[10px] text-text-muted hover:text-text-primary uppercase tracking-wider font-bold ml-auto"
               onClick={(e) => {
                 e.stopPropagation();
-                setFilter("bodyPart", "all");
-                setFilter("equipment", "all");
+                setFilter('bodyPart', 'all');
+                setFilter('equipment', 'all');
               }}
             >
               Clear All
@@ -477,10 +501,10 @@ export default function ExercisesPage() {
         initial="hidden"
         animate={
           prefersReducedMotion
-            ? "visibleNoStagger"
+            ? 'visibleNoStagger'
             : filteredExercises.length <= 40
-              ? "visible"
-              : "visibleNoStagger"
+              ? 'visible'
+              : 'visibleNoStagger'
         }
         key="exercise-grid"
       >
@@ -492,7 +516,7 @@ export default function ExercisesPage() {
               variants={prefersReducedMotion ? {} : itemVariants}
               ref={isLast ? lastElementRef : null}
               className="block h-full"
-              style={{ contentVisibility: "auto", containIntrinsicSize: "auto 250px" }}
+              style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 250px' }}
             >
               <Link
                 to="/exercises/$exerciseId"
@@ -534,9 +558,7 @@ export default function ExercisesPage() {
 
       {/* ── Load More Hint ── */}
       {filteredExercises.length > visibleCount && (
-        <p className="text-center text-xs text-text-muted py-4">
-          Loading more exercises...
-        </p>
+        <p className="text-center text-xs text-text-muted py-4">Loading more exercises...</p>
       )}
 
       {/* ── Empty State ── */}
@@ -547,10 +569,10 @@ export default function ExercisesPage() {
           description="Try adjusting your filters or search term."
           actionLabel="امسح الفلاتر"
           onAction={() => {
-            setSearchQuery("");
-            setFilter("search", "");
-            setFilter("bodyPart", "all");
-            setFilter("equipment", "all");
+            setSearchQuery('');
+            setFilter('search', '');
+            setFilter('bodyPart', 'all');
+            setFilter('equipment', 'all');
           }}
         />
       )}

@@ -1,20 +1,26 @@
 /**
- * i18n Type Safety
- * Generates type-safe keys from translation dictionaries
+ * Type-safe i18n keys generated from the shape of the English dictionary.
+ *
+ * `en.json` is the source of truth. Other dictionaries must satisfy the same
+ * nested shape (same keys), but values stay `string` — this removes the `as any`
+ * casts while still allowing translation text to differ.
  */
+import en from './en.json';
 
-import type en from "./en.json";
+export type TranslationDict = {
+  [key: string]: string | TranslationDict;
+};
 
-type NestedKeyOf<ObjectType extends object> = {
-  [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends object
-    ? `${Key}` | `${Key}.${NestedKeyOf<ObjectType[Key]>}`
-    : `${Key}`;
-}[keyof ObjectType & (string | number)];
+type LeafPaths<T, P extends string = ''> = {
+  [K in keyof T & string]: T[K] extends string
+    ? `${P}${K}`
+    : T[K] extends Record<string, unknown>
+      ? LeafPaths<T[K], `${P}${K}.`>
+      : never;
+}[keyof T & string];
 
-export type TranslationKey = NestedKeyOf<typeof en>;
+export type TranslationKey = LeafPaths<typeof en>;
 
-export type TranslationParams = Record<string, string | number>;
+export type Translate = (key: TranslationKey, params?: Record<string, string | number>) => string;
 
-// Example: type-safe t function signature
-// t('home.welcome') ✅
-// t('home.nonexistent') ❌ Type error
+export const enDict = en as TranslationDict;

@@ -1,21 +1,25 @@
-import { create } from "zustand";
-import { db, type WorkoutSession } from "@/db";
+import { create } from 'zustand';
+import { workoutRepository, type WorkoutSession } from '@/db';
 export type { WorkoutSession };
-import type { Exercise } from "@/types/exercise";
-import { useAuthStore } from "@/store/useAuthStore";
-import { useSocialStore } from "@/store/useSocialStore";
-import { useAchievementsStore } from "@/store/useAchievementsStore";
-import { useToastStore } from "@/store/useToastStore";
-import { pushToCloud } from "@/lib/syncEngine";
-import { uid } from "@/utils/id";
-import { playWorkoutStartSound, playWorkoutStopSound } from "@/utils/audio";
+import type { Exercise } from '@/types/exercise';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useSocialStore } from '@/store/useSocialStore';
+import { useAchievementsStore } from '@/store/useAchievementsStore';
+import { useToastStore } from '@/store/useToastStore';
+import { pushToCloud } from '@/lib/syncEngine';
+import { uid } from '@/utils/id';
+import { playWorkoutStartSound, playWorkoutStopSound } from '@/utils/audio';
 
 // ── Helpers ──
-import { storage } from "@/lib/storage";
+import { storage } from '@/lib/storage';
 
 // ── Get exercises from cache via centralized manager ──
 function getCachedExercises(): Exercise[] {
-  return (storage.getExercisesCache() as Exercise[]) || storage.get<Exercise[]>("exercises_cache", [] as any) || [];
+  return (
+    (storage.getExercisesCache() as Exercise[]) ||
+    storage.get<Exercise[]>('exercises_cache', [] as any) ||
+    []
+  );
 }
 
 // ── Types ──
@@ -27,7 +31,19 @@ export interface WorkoutSet {
   completed: boolean;
   previousWeight?: number;
   previousReps?: number;
-  setType?: "normal" | "warmup" | "right" | "left" | "failure" | "drop" | "negative" | "partial" | "myoreps" | "feeder" | "top" | "backoff";
+  setType?:
+    | 'normal'
+    | 'warmup'
+    | 'right'
+    | 'left'
+    | 'failure'
+    | 'drop'
+    | 'negative'
+    | 'partial'
+    | 'myoreps'
+    | 'feeder'
+    | 'top'
+    | 'backoff';
 }
 
 export interface WorkoutExerciseItem {
@@ -59,17 +75,10 @@ async function getLastExerciseData(
 ): Promise<{ weight: number; reps: number }[] | null> {
   try {
     // Optimization: Order by date descending and take last 10, then filter
-    const sessions = await db.workoutSessions
-      .where("completed")
-      .equals(1)
-      .reverse()
-      .limit(10)
-      .toArray();
+    const sessions = await workoutRepository.recentCompleted(10);
 
     for (const session of sessions) {
-      const ex = session.exercises.find(
-        (e) => String(e.exerciseId) === String(exerciseId),
-      );
+      const ex = session.exercises.find((e) => String(e.exerciseId) === String(exerciseId));
       if (ex && ex.sets.length > 0) {
         return ex.sets.map((s) => ({ weight: s.weight, reps: s.reps }));
       }
@@ -81,9 +90,7 @@ async function getLastExerciseData(
 }
 
 // ── Build an exercise item with ghost data from previous sessions ──
-async function buildExerciseItem(
-  exerciseId: string,
-): Promise<WorkoutExerciseItem | null> {
+async function buildExerciseItem(exerciseId: string): Promise<WorkoutExerciseItem | null> {
   const exercises = getCachedExercises();
   const exercise = exercises.find((e) => e.id === exerciseId);
   if (!exercise) return null;
@@ -91,18 +98,15 @@ async function buildExerciseItem(
   const previousSets = await getLastExerciseData(exerciseId);
 
   const initialSetCount = 3;
-  const sets: WorkoutSet[] = Array.from(
-    { length: initialSetCount },
-    (_, i) => ({
-      id: uid(),
-      weight: "",
-      reps: "",
-      completed: false,
-      previousWeight: previousSets?.[i]?.weight,
-      previousReps: previousSets?.[i]?.reps,
-      setType: "normal",
-    }),
-  );
+  const sets: WorkoutSet[] = Array.from({ length: initialSetCount }, (_, i) => ({
+    id: uid(),
+    weight: '',
+    reps: '',
+    completed: false,
+    previousWeight: previousSets?.[i]?.weight,
+    previousReps: previousSets?.[i]?.reps,
+    setType: 'normal',
+  }));
 
   return {
     id: uid(),
@@ -131,17 +135,14 @@ interface WorkoutState {
 
   // Actions
   startWorkout: (exerciseIds: string[]) => Promise<string>;
-  replaceExercise: (
-    exerciseIndex: number,
-    newExerciseId: string,
-  ) => Promise<void>;
+  replaceExercise: (exerciseIndex: number, newExerciseId: string) => Promise<void>;
   addSet: (exerciseIndex: number) => void;
   removeSet: (exerciseIndex: number, setId: string) => void;
   setExerciseNotes: (exerciseIndex: number, notes: string) => void;
   updateSet: (
     exerciseIndex: number,
     setId: string,
-    updates: Partial<Pick<WorkoutSet, "weight" | "reps" | "rpe" | "setType">>,
+    updates: Partial<Pick<WorkoutSet, 'weight' | 'reps' | 'rpe' | 'setType'>>,
   ) => void;
   toggleSetComplete: (exerciseIndex: number, setId: string) => void;
   dismissRestTimer: () => void;
@@ -209,13 +210,13 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         ...exercise.sets,
         {
           id: uid(),
-          weight: lastSet?.weight || "",
-          reps: lastSet?.reps || "",
-          rpe: lastSet?.rpe || "",
+          weight: lastSet?.weight || '',
+          reps: lastSet?.reps || '',
+          rpe: lastSet?.rpe || '',
           completed: false,
           previousWeight: lastSet?.previousWeight,
           previousReps: lastSet?.previousReps,
-          setType: "normal",
+          setType: 'normal',
         },
       ],
     };
@@ -263,9 +264,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
 
     exercises[exerciseIndex] = {
       ...exercise,
-      sets: exercise.sets.map((s) =>
-        s.id === setId ? { ...s, ...updates } : s,
-      ),
+      sets: exercise.sets.map((s) => (s.id === setId ? { ...s, ...updates } : s)),
     };
 
     set({ activeWorkout: { ...activeWorkout, exercises } });
@@ -285,9 +284,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
 
     exercises[exerciseIndex] = {
       ...exercise,
-      sets: exercise.sets.map((s) =>
-        s.id === setId ? { ...s, completed: !s.completed } : s,
-      ),
+      sets: exercise.sets.map((s) => (s.id === setId ? { ...s, completed: !s.completed } : s)),
     };
 
     set({
@@ -305,13 +302,11 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     if (!activeWorkout) return;
 
     try {
-      const duration = Math.floor(
-        (Date.now() - activeWorkout.startedAt) / 1000,
-      );
+      const duration = Math.floor((Date.now() - activeWorkout.startedAt) / 1000);
 
       const session: WorkoutSession = {
         id: uid(),
-        name: `ReLift Workout ${new Date().toLocaleDateString("en-US")}`,
+        name: `ReLift Workout ${new Date().toLocaleDateString('en-US')}`,
         date: new Date().toISOString(),
         duration,
         exercises: activeWorkout.exercises
@@ -329,7 +324,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
                 reps: Number(s.reps) || 0,
                 rpe: s.rpe ? Number(s.rpe) : undefined,
                 completed: true,
-                setType: s.setType || "normal",
+                setType: s.setType || 'normal',
               })),
           })),
         completed: true,
@@ -337,7 +332,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         updatedAt: new Date().toISOString(),
       };
 
-      await db.workoutSessions.add(session);
+      await workoutRepository.add(session);
 
       const user = useAuthStore.getState().user;
 
@@ -351,9 +346,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         pushToCloud(user.uid).catch(console.error);
         if (shareToFeed) {
           const totalVolume = session.exercises.reduce(
-            (sum, ex) =>
-              sum +
-              ex.sets.reduce((sSum, set) => sSum + set.weight * set.reps, 0),
+            (sum, ex) => sum + ex.sets.reduce((sSum, set) => sSum + set.weight * set.reps, 0),
             0,
           );
           const exercisesToPublish = activeWorkout.exercises
@@ -366,18 +359,13 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
             }));
           useSocialStore
             .getState()
-            .publishSession(
-              user.uid,
-              user.displayName || "Unknown Athlete",
-              user.photoURL,
-              {
-                workoutTitle: session.name,
-                duration: session.duration,
-                exercisesCount: session.exercises.length,
-                totalVolume,
-                exercises: exercisesToPublish,
-              },
-            )
+            .publishSession(user.uid, user.displayName || 'Unknown Athlete', user.photoURL, {
+              workoutTitle: session.name,
+              duration: session.duration,
+              exercisesCount: session.exercises.length,
+              totalVolume,
+              exercises: exercisesToPublish,
+            })
             .catch(console.error);
         }
       }
@@ -388,14 +376,10 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         completedSessions: [session, ...get().completedSessions],
       });
       playWorkoutStopSound();
-      useToastStore
-        .getState()
-        .addToast("success", "Workout saved successfully!");
+      useToastStore.getState().addToast('success', 'Workout saved successfully!');
     } catch (error) {
-      console.error("Failed to save workout session:", error);
-      useToastStore
-        .getState()
-        .addToast("error", "Failed to save workout. Please try again.");
+      console.error('Failed to save workout session:', error);
+      useToastStore.getState().addToast('error', 'Failed to save workout. Please try again.');
     }
   },
 
@@ -419,8 +403,8 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
           };
           return [
             {
-              id: "demo-s1",
-              name: "Push Power Day",
+              id: 'demo-s1',
+              name: 'Push Power Day',
               date: now.toISOString(),
               duration: 3600,
               completed: true,
@@ -428,39 +412,39 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: now.toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-bench",
-                  exerciseName: "Barbell Bench Press",
-                  muscleGroup: "Chest",
+                  exerciseId: 'demo-ex-bench',
+                  exerciseName: 'Barbell Bench Press',
+                  muscleGroup: 'Chest',
                   sets: [
                     { weight: 80, reps: 10, completed: true },
                     { weight: 90, reps: 8, completed: true },
                     { weight: 100, reps: 6, completed: true },
-                  ]
+                  ],
                 },
                 {
-                  exerciseId: "demo-ex-ohp",
-                  exerciseName: "Barbell Overhead Press",
-                  muscleGroup: "Shoulders",
+                  exerciseId: 'demo-ex-ohp',
+                  exerciseName: 'Barbell Overhead Press',
+                  muscleGroup: 'Shoulders',
                   sets: [
                     { weight: 50, reps: 8, completed: true },
                     { weight: 60, reps: 6, completed: true },
                     { weight: 65, reps: 5, completed: true },
-                  ]
+                  ],
                 },
                 {
-                  exerciseId: "demo-ex-tricep",
-                  exerciseName: "Triceps Cable Pushdown",
-                  muscleGroup: "Arms",
+                  exerciseId: 'demo-ex-tricep',
+                  exerciseName: 'Triceps Cable Pushdown',
+                  muscleGroup: 'Arms',
                   sets: [
                     { weight: 25, reps: 12, completed: true },
                     { weight: 30, reps: 10, completed: true },
-                  ]
-                }
-              ]
+                  ],
+                },
+              ],
             },
             {
-              id: "demo-s2",
-              name: "Pull Strength Day",
+              id: 'demo-s2',
+              name: 'Pull Strength Day',
               date: subDays(now, 1).toISOString(),
               duration: 4200,
               completed: true,
@@ -468,29 +452,29 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: subDays(now, 1).toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-row",
-                  exerciseName: "Barbell Row",
-                  muscleGroup: "Back",
+                  exerciseId: 'demo-ex-row',
+                  exerciseName: 'Barbell Row',
+                  muscleGroup: 'Back',
                   sets: [
                     { weight: 70, reps: 10, completed: true },
                     { weight: 80, reps: 8, completed: true },
                     { weight: 85, reps: 8, completed: true },
-                  ]
+                  ],
                 },
                 {
-                  exerciseId: "demo-ex-bicep",
-                  exerciseName: "Dumbbell Biceps Curl",
-                  muscleGroup: "Arms",
+                  exerciseId: 'demo-ex-bicep',
+                  exerciseName: 'Dumbbell Biceps Curl',
+                  muscleGroup: 'Arms',
                   sets: [
                     { weight: 16, reps: 12, completed: true },
                     { weight: 18, reps: 10, completed: true },
-                  ]
-                }
-              ]
+                  ],
+                },
+              ],
             },
             {
-              id: "demo-s3",
-              name: "Legs Hypertrophy",
+              id: 'demo-s3',
+              name: 'Legs Hypertrophy',
               date: subDays(now, 3).toISOString(),
               duration: 4500,
               completed: true,
@@ -498,29 +482,29 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: subDays(now, 3).toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-squat",
-                  exerciseName: "Barbell Squat",
-                  muscleGroup: "Legs",
+                  exerciseId: 'demo-ex-squat',
+                  exerciseName: 'Barbell Squat',
+                  muscleGroup: 'Legs',
                   sets: [
                     { weight: 110, reps: 8, completed: true },
                     { weight: 120, reps: 6, completed: true },
                     { weight: 130, reps: 5, completed: true },
-                  ]
+                  ],
                 },
                 {
-                  exerciseId: "demo-ex-abs",
-                  exerciseName: "Core Plank Board",
-                  muscleGroup: "Core",
+                  exerciseId: 'demo-ex-abs',
+                  exerciseName: 'Core Plank Board',
+                  muscleGroup: 'Core',
                   sets: [
                     { weight: 0, reps: 60, completed: true },
                     { weight: 0, reps: 60, completed: true },
-                  ]
-                }
-              ]
+                  ],
+                },
+              ],
             },
             {
-              id: "demo-s4",
-              name: "Cardio & Abs Core",
+              id: 'demo-s4',
+              name: 'Cardio & Abs Core',
               date: subDays(now, 4).toISOString(),
               duration: 2400,
               completed: true,
@@ -528,19 +512,19 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: subDays(now, 4).toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-abs-2",
-                  exerciseName: "Hanging Leg Raise",
-                  muscleGroup: "Core",
+                  exerciseId: 'demo-ex-abs-2',
+                  exerciseName: 'Hanging Leg Raise',
+                  muscleGroup: 'Core',
                   sets: [
                     { weight: 0, reps: 15, completed: true },
                     { weight: 0, reps: 12, completed: true },
-                  ]
-                }
-              ]
+                  ],
+                },
+              ],
             },
             {
-              id: "demo-s5",
-              name: "Chest & Arms Blast",
+              id: 'demo-s5',
+              name: 'Chest & Arms Blast',
               date: subDays(now, 6).toISOString(),
               duration: 3800,
               completed: true,
@@ -548,28 +532,28 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: subDays(now, 6).toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-bench-incline",
-                  exerciseName: "Incline Dumbbell Press",
-                  muscleGroup: "Chest",
+                  exerciseId: 'demo-ex-bench-incline',
+                  exerciseName: 'Incline Dumbbell Press',
+                  muscleGroup: 'Chest',
                   sets: [
                     { weight: 32, reps: 10, completed: true },
                     { weight: 36, reps: 8, completed: true },
-                  ]
+                  ],
                 },
                 {
-                  exerciseId: "demo-ex-bicep-2",
-                  exerciseName: "Barbell Curl",
-                  muscleGroup: "Arms",
+                  exerciseId: 'demo-ex-bicep-2',
+                  exerciseName: 'Barbell Curl',
+                  muscleGroup: 'Arms',
                   sets: [
                     { weight: 35, reps: 10, completed: true },
                     { weight: 40, reps: 8, completed: true },
-                  ]
-                }
-              ]
+                  ],
+                },
+              ],
             },
             {
-              id: "demo-s6",
-              name: "Full Back Workout",
+              id: 'demo-s6',
+              name: 'Full Back Workout',
               date: subDays(now, 8).toISOString(),
               duration: 4100,
               completed: true,
@@ -577,19 +561,19 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: subDays(now, 8).toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-pullup",
-                  exerciseName: "Bodyweight Pullups",
-                  muscleGroup: "Back",
+                  exerciseId: 'demo-ex-pullup',
+                  exerciseName: 'Bodyweight Pullups',
+                  muscleGroup: 'Back',
                   sets: [
                     { weight: 0, reps: 12, completed: true },
                     { weight: 0, reps: 10, completed: true },
-                  ]
-                }
-              ]
+                  ],
+                },
+              ],
             },
             {
-              id: "demo-s7",
-              name: "Shoulders & Triceps",
+              id: 'demo-s7',
+              name: 'Shoulders & Triceps',
               date: subDays(now, 11).toISOString(),
               duration: 3500,
               completed: true,
@@ -597,19 +581,19 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: subDays(now, 11).toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-lateral",
-                  exerciseName: "Lateral Dumbbell Raise",
-                  muscleGroup: "Shoulders",
+                  exerciseId: 'demo-ex-lateral',
+                  exerciseName: 'Lateral Dumbbell Raise',
+                  muscleGroup: 'Shoulders',
                   sets: [
                     { weight: 12, reps: 15, completed: true },
                     { weight: 14, reps: 12, completed: true },
-                  ]
-                }
-              ]
+                  ],
+                },
+              ],
             },
             {
-              id: "demo-s8",
-              name: "Posterior Leg Day",
+              id: 'demo-s8',
+              name: 'Posterior Leg Day',
               date: subDays(now, 15).toISOString(),
               duration: 4800,
               completed: true,
@@ -617,30 +601,26 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
               updatedAt: subDays(now, 15).toISOString(),
               exercises: [
                 {
-                  exerciseId: "demo-ex-rdl",
-                  exerciseName: "Romanian Deadlift",
-                  muscleGroup: "Legs",
+                  exerciseId: 'demo-ex-rdl',
+                  exerciseName: 'Romanian Deadlift',
+                  muscleGroup: 'Legs',
                   sets: [
                     { weight: 80, reps: 12, completed: true },
                     { weight: 100, reps: 10, completed: true },
-                  ]
-                }
-              ]
-            }
+                  ],
+                },
+              ],
+            },
           ];
         };
         set({ completedSessions: getDemoCompletedSessions(), isLoadingCompleted: false });
         return;
       }
 
-      const sessions = await db.workoutSessions
-        .where("completed")
-        .equals(1)
-        .reverse()
-        .toArray();
+      const sessions = await workoutRepository.completedSessionsDescending();
       set({ completedSessions: sessions, isLoadingCompleted: false });
     } catch (error) {
-      console.error("Failed to load completed sessions:", error);
+      console.error('Failed to load completed sessions:', error);
       set({ isLoadingCompleted: false });
     }
   },
@@ -648,14 +628,14 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   // ── Delete a completed session ──
   deleteCompletedSession: async (id: string) => {
     try {
-      await db.workoutSessions.delete(id);
+      await workoutRepository.remove(id);
       set({
         completedSessions: get().completedSessions.filter((s) => s.id !== id),
       });
-      useToastStore.getState().addToast("success", "Workout session deleted!");
+      useToastStore.getState().addToast('success', 'Workout session deleted!');
     } catch (error) {
-      console.error("Failed to delete workout session:", error);
-      useToastStore.getState().addToast("error", "Failed to delete session.");
+      console.error('Failed to delete workout session:', error);
+      useToastStore.getState().addToast('error', 'Failed to delete session.');
     }
   },
 

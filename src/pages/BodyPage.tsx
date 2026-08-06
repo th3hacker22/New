@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/Button";
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/Button';
 import {
   LineChart,
   Line,
@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from "recharts";
+} from 'recharts';
 import {
   Scale,
   Ruler,
@@ -22,51 +22,51 @@ import {
   Sparkles,
   ChevronsLeftRight,
   Target,
-} from "lucide-react";
-import { db, type BodyMeasurement, type ProgressPhoto } from "@/db";
-import { uid } from "@/utils/id";
-import { WeightGoalTracker } from "@/components/stats/WeightGoalTracker";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import TDEECalculator from "@/components/extras/TDEECalculator";
-import { Calculator } from "lucide-react";
-import bodyCompositionImg from "@/assets/images/body_composition_illustration_new_1784774021265.jpg";
+} from 'lucide-react';
+import { bodyRepository, type BodyMeasurement, type ProgressPhoto } from '@/db';
+import { uid } from '@/utils/id';
+import { WeightGoalTracker } from '@/components/stats/WeightGoalTracker';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import TDEECalculator from '@/components/extras/TDEECalculator';
+import { Calculator } from 'lucide-react';
+import bodyCompositionImg from '@/assets/images/body_composition_illustration_new_1784774021265.jpg';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" as const },
+    transition: { delay: i * 0.1, duration: 0.4, ease: 'easeOut' as const },
   }),
 };
 
 export default function BodyPage() {
   const { language } = useSettingsStore();
-  const isAr = language === "ar";
+  const isAr = language === 'ar';
   const [isTdeeOpen, setIsTdeeOpen] = useState(false);
-  
+
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [photos, setPhotos] = useState<(ProgressPhoto & { url: string })[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
-    weight: "",
-    bodyFat: "",
-    waist: "",
-    chest: "",
+    weight: '',
+    bodyFat: '',
+    waist: '',
+    chest: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [sliderPos, setSliderPos] = useState(50);
-  const [beforePhotoId, setBeforePhotoId] = useState<string>("");
-  const [afterPhotoId, setAfterPhotoId] = useState<string>("");
+  const [beforePhotoId, setBeforePhotoId] = useState<string>('');
+  const [afterPhotoId, setAfterPhotoId] = useState<string>('');
 
   useEffect(() => {
     if (photos.length >= 2) {
       if (!beforePhotoId) {
-        setBeforePhotoId(photos[photos.length - 1].id || "");
+        setBeforePhotoId(photos[photos.length - 1].id || '');
       }
       if (!afterPhotoId) {
-        setAfterPhotoId(photos[0].id || "");
+        setAfterPhotoId(photos[0].id || '');
       }
     }
   }, [photos, beforePhotoId, afterPhotoId]);
@@ -78,8 +78,8 @@ export default function BodyPage() {
 
   async function loadData() {
     const [measurementsData, photosData] = await Promise.all([
-      db.bodyMeasurements.orderBy("date").reverse().toArray(),
-      db.progressPhotos.orderBy("date").reverse().toArray(),
+      bodyRepository.listMeasurements(),
+      bodyRepository.listPhotos(),
     ]);
 
     setMeasurements(measurementsData);
@@ -112,8 +112,8 @@ export default function BodyPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    await db.bodyMeasurements.add(measurement);
-    setFormData({ weight: "", bodyFat: "", waist: "", chest: "" });
+    await bodyRepository.addMeasurement(measurement);
+    setFormData({ weight: '', bodyFat: '', waist: '', chest: '' });
     setShowAddForm(false);
     loadData();
   }
@@ -129,22 +129,22 @@ export default function BodyPage() {
     const photo: ProgressPhoto = {
       id: uid(),
       date: new Date().toISOString(),
-      type: "front",
+      type: 'front',
       imageBlob,
       createdAt: new Date().toISOString(),
     };
 
-    await db.progressPhotos.add(photo);
+    await bodyRepository.addPhoto(photo);
     loadData();
 
     // Reset input
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   // Delete photo
   async function deletePhoto(id: string) {
-    if (!confirm("Are you sure you want to delete this photo?")) return;
-    await db.progressPhotos.delete(id);
+    if (!confirm('Are you sure you want to delete this photo?')) return;
+    await bodyRepository.removePhoto(id);
     loadData();
   }
 
@@ -154,14 +154,14 @@ export default function BodyPage() {
     .slice(0, 30)
     .reverse()
     .map((m) => ({
-      date: m.date.split("T")[0],
+      date: m.date.split('T')[0],
       weight: m.weight,
     }));
 
   const latestMeasurement = measurements[0];
 
   return (
-    <div className="space-y-6 pb-6 pt-2" dir={isAr ? "rtl" : "ltr"}>
+    <div className="space-y-6 pb-6 pt-2" dir={isAr ? 'rtl' : 'ltr'}>
       {/* ── Page Header ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -177,13 +177,15 @@ export default function BodyPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-bg-surface/90 via-bg-surface/60 to-transparent flex flex-col justify-center p-5">
             <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/20 border border-primary/30 px-2.5 py-0.5 rounded-md self-start mb-1 backdrop-blur-md">
-              {isAr ? "ماسح تكوين الجسم 3D" : "3D BODY COMPOSITION"}
+              {isAr ? 'ماسح تكوين الجسم 3D' : '3D BODY COMPOSITION'}
             </span>
             <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-text-primary">
-              {isAr ? "قياسات وتتبع التحول البدني" : "Body Composition & Profile"}
+              {isAr ? 'قياسات وتتبع التحول البدني' : 'Body Composition & Profile'}
             </h1>
             <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md">
-              {isAr ? "سجل وزنك، نسبة الدهون، ومقاييس الأبعاد الجسدية بدقة" : "Monitor weight, body fat %, and physical transformation milestones"}
+              {isAr
+                ? 'سجل وزنك، نسبة الدهون، ومقاييس الأبعاد الجسدية بدقة'
+                : 'Monitor weight, body fat %, and physical transformation milestones'}
             </p>
           </div>
         </div>
@@ -203,12 +205,12 @@ export default function BodyPage() {
           </div>
           <div className="min-w-0">
             <p className="text-[11px] text-text-muted uppercase tracking-wider truncate">
-              {isAr ? "الوزن الحالي" : "Weight"}
+              {isAr ? 'الوزن الحالي' : 'Weight'}
             </p>
             <p className="text-xl font-bold text-text-primary tabular-nums">
-              {latestMeasurement?.weight ?? "—"}
+              {latestMeasurement?.weight ?? '—'}
               <span className="text-[10px] text-text-muted ml-1 uppercase tracking-wider">
-                {isAr ? "كجم" : "kg"}
+                {isAr ? 'كجم' : 'kg'}
               </span>
             </p>
           </div>
@@ -219,10 +221,10 @@ export default function BodyPage() {
           </div>
           <div className="min-w-0">
             <p className="text-[11px] text-text-muted uppercase tracking-wider truncate">
-              {isAr ? "نسبة الدهون" : "Body Fat"}
+              {isAr ? 'نسبة الدهون' : 'Body Fat'}
             </p>
             <p className="text-xl font-bold text-text-primary tabular-nums">
-              {latestMeasurement?.bodyFat ?? "—"}
+              {latestMeasurement?.bodyFat ?? '—'}
               <span className="text-[10px] text-text-muted ml-0.5">%</span>
             </p>
           </div>
@@ -244,10 +246,12 @@ export default function BodyPage() {
           </div>
           <div className="text-left">
             <h3 className="text-sm font-black text-text-primary uppercase tracking-wider">
-              {isAr ? "حاسبة السعرات والماكروز TDEE" : "Scientific TDEE & Macros"}
+              {isAr ? 'حاسبة السعرات والماكروز TDEE' : 'Scientific TDEE & Macros'}
             </h3>
             <p className="text-[11px] text-text-muted font-bold uppercase tracking-wider mt-0.5">
-              {isAr ? "اعرف معدل حرق جسمك اليومي وتقسيم المغذيات المثالي" : "Find your ideal calorie burn & custom nutrition plan"}
+              {isAr
+                ? 'اعرف معدل حرق جسمك اليومي وتقسيم المغذيات المثالي'
+                : 'Find your ideal calorie burn & custom nutrition plan'}
             </p>
           </div>
         </div>
@@ -260,7 +264,7 @@ export default function BodyPage() {
             setIsTdeeOpen(true);
           }}
         >
-          {isAr ? "احسب الآن" : "Calculate"}
+          {isAr ? 'احسب الآن' : 'Calculate'}
         </Button>
       </motion.div>
 
@@ -273,7 +277,7 @@ export default function BodyPage() {
           animate="visible"
           custom={0.5}
         >
-          <WeightGoalTracker 
+          <WeightGoalTracker
             current={latestMeasurement.weight}
             start={measurements[measurements.length - 1]?.weight || latestMeasurement.weight}
             target={75} // Placeholder
@@ -306,56 +310,47 @@ export default function BodyPage() {
         {chartData.length > 1 ? (
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#27272A"
-                  vertical={false}
-                />
+              <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#A1A1AA", fontSize: 10 }}
+                  tick={{ fill: '#A1A1AA', fontSize: 10 }}
                   tickFormatter={(d) =>
-                    new Date(d).toLocaleDateString("en-US", {
-                      day: "numeric",
-                      month: "short",
+                    new Date(d).toLocaleDateString('en-US', {
+                      day: 'numeric',
+                      month: 'short',
                     })
                   }
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#A1A1AA", fontSize: 10 }}
-                  domain={["auto", "auto"]}
+                  tick={{ fill: '#A1A1AA', fontSize: 10 }}
+                  domain={['auto', 'auto']}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#1C1C1F",
-                    border: "1px solid #27272A",
+                    backgroundColor: '#1C1C1F',
+                    border: '1px solid #27272A',
                     borderRadius: 8,
                     fontSize: 12,
                   }}
-                  labelStyle={{ color: "#F5F5F7" }}
-                  formatter={(value) => [`${Number(value)} kg`, "الوزن"]}
-                  labelFormatter={(d) =>
-                    new Date(d).toLocaleDateString("en-US")
-                  }
+                  labelStyle={{ color: '#F5F5F7' }}
+                  formatter={(value) => [`${Number(value)} kg`, 'الوزن']}
+                  labelFormatter={(d) => new Date(d).toLocaleDateString('en-US')}
                 />
                 <Line
                   type="monotone"
                   dataKey="weight"
                   stroke="#CCFF00"
                   strokeWidth={2}
-                  dot={{ fill: "#CCFF00", strokeWidth: 0, r: 4 }}
+                  dot={{ fill: '#CCFF00', strokeWidth: 0, r: 4 }}
                   activeDot={{
                     r: 6,
-                    fill: "#CCFF00",
-                    stroke: "#1C1C1F",
+                    fill: '#CCFF00',
+                    stroke: '#1C1C1F',
                     strokeWidth: 2,
                   }}
                   animationDuration={800}
@@ -403,27 +398,21 @@ export default function BodyPage() {
               </thead>
               <tbody className="text-sm tabular-nums">
                 {measurements.slice(0, 5).map((m) => (
-                  <tr
-                    key={m.id}
-                    className="border-b border-border/30 last:border-0"
-                  >
+                  <tr key={m.id} className="border-b border-border/30 last:border-0">
                     <td className="py-3 text-text-muted whitespace-nowrap">
-                      {new Date(m.date).toLocaleDateString("en-US", {
-                        day: "numeric",
-                        month: "short",
+                      {new Date(m.date).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
                       })}
                     </td>
                     <td className="py-3 text-text-primary">
-                      {m.chest ?? "—"}{" "}
-                      <span className="text-text-muted text-[10px]">cm</span>
+                      {m.chest ?? '—'} <span className="text-text-muted text-[10px]">cm</span>
                     </td>
                     <td className="py-3 text-text-primary">
-                      {m.waist ?? "—"}{" "}
-                      <span className="text-text-muted text-[10px]">cm</span>
+                      {m.waist ?? '—'} <span className="text-text-muted text-[10px]">cm</span>
                     </td>
                     <td className="py-3 font-semibold text-primary">
-                      {m.weight ?? "—"}{" "}
-                      <span className="text-text-muted text-[10px]">kg</span>
+                      {m.weight ?? '—'} <span className="text-text-muted text-[10px]">kg</span>
                     </td>
                   </tr>
                 ))}
@@ -490,10 +479,10 @@ export default function BodyPage() {
                   <Trash2 className="h-4 w-4" />
                 </button>
                 <p className="absolute bottom-2 left-2 text-[10px] uppercase font-bold tracking-wider text-text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                  {new Date(photo.date).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "2-digit",
+                  {new Date(photo.date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: '2-digit',
                   })}
                 </p>
               </div>
@@ -540,7 +529,11 @@ export default function BodyPage() {
               >
                 {photos.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {new Date(p.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
                   </option>
                 ))}
               </select>
@@ -556,7 +549,11 @@ export default function BodyPage() {
               >
                 {photos.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    {new Date(p.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
                   </option>
                 ))}
               </select>
@@ -637,10 +634,10 @@ export default function BodyPage() {
           >
             <motion.div
               className="w-full max-w-md rounded-t-2xl glass-card border-b-0 border-x-0 p-5"
-              initial={{ y: "100%" }}
+              initial={{ y: '100%' }}
               animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mx-auto mb-4 h-1 g-border w-12 rounded-full bg-border" />
@@ -667,9 +664,7 @@ export default function BodyPage() {
                       type="number"
                       step="0.1"
                       value={formData.weight}
-                      onChange={(e) =>
-                        setFormData({ ...formData, weight: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                       className="w-full rounded-xl border border-border bg-bg-elevated px-4 py-3 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                       placeholder="75.5"
                     />
@@ -682,9 +677,7 @@ export default function BodyPage() {
                       type="number"
                       step="0.1"
                       value={formData.bodyFat}
-                      onChange={(e) =>
-                        setFormData({ ...formData, bodyFat: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, bodyFat: e.target.value })}
                       className="w-full rounded-xl border border-border bg-bg-elevated px-4 py-3 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                       placeholder="18"
                     />
@@ -696,9 +689,7 @@ export default function BodyPage() {
                     <input
                       type="number"
                       value={formData.chest}
-                      onChange={(e) =>
-                        setFormData({ ...formData, chest: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, chest: e.target.value })}
                       className="w-full rounded-xl border border-border bg-bg-elevated px-4 py-3 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                       placeholder="105"
                     />
@@ -710,9 +701,7 @@ export default function BodyPage() {
                     <input
                       type="number"
                       value={formData.waist}
-                      onChange={(e) =>
-                        setFormData({ ...formData, waist: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, waist: e.target.value })}
                       className="w-full rounded-xl border border-border bg-bg-elevated px-4 py-3 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                       placeholder="82"
                     />
@@ -732,11 +721,7 @@ export default function BodyPage() {
         )}
       </AnimatePresence>
 
-      <TDEECalculator
-        isOpen={isTdeeOpen}
-        onClose={() => setIsTdeeOpen(false)}
-        isAr={isAr}
-      />
+      <TDEECalculator isOpen={isTdeeOpen} onClose={() => setIsTdeeOpen(false)} isAr={isAr} />
     </div>
   );
 }

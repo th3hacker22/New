@@ -1,13 +1,13 @@
-import { create } from "zustand";
-import { db } from "@/db";
-import type { WorkoutSession } from "@/db";
-import { useAuthStore } from "@/store/useAuthStore";
-import { useAchievementsStore } from "@/store/useAchievementsStore";
-import { useToastStore } from "@/store/useToastStore";
-import { useWorkoutStore } from "@/store/useWorkoutStore";
-import { pushToCloud } from "@/lib/syncEngine";
-import { uid } from "@/utils/id";
-import { playWorkoutStopSound } from "@/utils/audio";
+import { create } from 'zustand';
+import { workoutRepository } from '@/db';
+import type { WorkoutSession } from '@/db';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useAchievementsStore } from '@/store/useAchievementsStore';
+import { useToastStore } from '@/store/useToastStore';
+import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { pushToCloud } from '@/lib/syncEngine';
+import { uid } from '@/utils/id';
+import { playWorkoutStopSound } from '@/utils/audio';
 
 export interface QuickLogSet {
   weight: string;
@@ -27,7 +27,7 @@ export interface QuickLogEntry {
 interface QuickLogState {
   quickLogs: QuickLogEntry[];
   isLoading: boolean;
-  
+
   // Actions
   addQuickLog: (
     exerciseId: string,
@@ -35,7 +35,7 @@ interface QuickLogState {
     exerciseNameAr: string | undefined,
     muscleGroup: string,
     target: string,
-    sets: QuickLogSet[]
+    sets: QuickLogSet[],
   ) => Promise<void>;
   loadQuickLogs: () => Promise<void>;
   deleteQuickLog: (id: string) => Promise<void>;
@@ -50,21 +50,17 @@ export const useQuickLogStore = create<QuickLogState>((set, get) => ({
     try {
       // Load quick log sessions from Dexie database
       // Quick logs have a naming convention or a flag, or we can just fetch workoutSessions where name starts with "Quick Log:"
-      const sessions = await db.workoutSessions
-        .where("completed")
-        .equals(1)
-        .reverse()
-        .toArray();
+      const sessions = await workoutRepository.completedSessionsDescending();
 
       const quickLogs: QuickLogEntry[] = sessions
-        .filter((s) => s.name.startsWith("Quick Log:"))
+        .filter((s) => s.name.startsWith('Quick Log:'))
         .map((s) => {
           const ex = s.exercises[0]; // Quick logs are single exercise
           return {
             id: s.id,
             exerciseId: String(ex.exerciseId),
             exerciseName: ex.exerciseName,
-            muscleGroup: ex.muscleGroup || "",
+            muscleGroup: ex.muscleGroup || '',
             date: s.date,
             sets: ex.sets.map((set) => ({
               weight: String(set.weight),
@@ -75,7 +71,7 @@ export const useQuickLogStore = create<QuickLogState>((set, get) => ({
 
       set({ quickLogs, isLoading: false });
     } catch (err) {
-      console.error("Failed to load quick logs:", err);
+      console.error('Failed to load quick logs:', err);
       set({ isLoading: false });
     }
   },
@@ -83,7 +79,7 @@ export const useQuickLogStore = create<QuickLogState>((set, get) => ({
   addQuickLog: async (exerciseId, exerciseName, exerciseNameAr, muscleGroup, target, sets) => {
     try {
       const sessionId = uid();
-      
+
       // 1. Create fully compatible Dexie WorkoutSession object
       const session: WorkoutSession = {
         id: sessionId,
@@ -100,7 +96,7 @@ export const useQuickLogStore = create<QuickLogState>((set, get) => ({
               weight: parseFloat(s.weight) || 0,
               reps: parseInt(s.reps, 10) || 0,
               completed: true,
-              setType: "normal",
+              setType: 'normal',
             })),
           },
         ],
@@ -111,7 +107,7 @@ export const useQuickLogStore = create<QuickLogState>((set, get) => ({
       };
 
       // 2. Add to Dexie database
-      await db.workoutSessions.add(session);
+      await workoutRepository.add(session);
 
       // 3. Play a subtle completion sound to reward the action
       try {
@@ -149,18 +145,18 @@ export const useQuickLogStore = create<QuickLogState>((set, get) => ({
       // Reload completed sessions so they appear instantly in Stats / Workout History tab
       useWorkoutStore.getState().loadCompletedSessions().catch(console.error);
 
-      useToastStore.getState().addToast("success", "Quick Log saved successfully!");
+      useToastStore.getState().addToast('success', 'Quick Log saved successfully!');
     } catch (err) {
-      console.error("Failed to save quick log:", err);
-      useToastStore.getState().addToast("error", "Failed to save log. Try again.");
+      console.error('Failed to save quick log:', err);
+      useToastStore.getState().addToast('error', 'Failed to save log. Try again.');
     }
   },
 
   deleteQuickLog: async (id) => {
     try {
       // Delete from Dexie DB
-      await db.workoutSessions.delete(id);
-      
+      await workoutRepository.remove(id);
+
       // Update store slice
       set({
         quickLogs: get().quickLogs.filter((log) => log.id !== id),
@@ -169,10 +165,10 @@ export const useQuickLogStore = create<QuickLogState>((set, get) => ({
       // Reload completed sessions to remove deleted logs instantly from charts & history
       useWorkoutStore.getState().loadCompletedSessions().catch(console.error);
 
-      useToastStore.getState().addToast("success", "Log deleted successfully!");
+      useToastStore.getState().addToast('success', 'Log deleted successfully!');
     } catch (err) {
-      console.error("Failed to delete quick log:", err);
-      useToastStore.getState().addToast("error", "Failed to delete log.");
+      console.error('Failed to delete quick log:', err);
+      useToastStore.getState().addToast('error', 'Failed to delete log.');
     }
   },
 }));

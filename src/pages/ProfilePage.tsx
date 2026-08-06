@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Settings,
@@ -13,38 +13,45 @@ import {
   Upload,
   UserPlus,
   UserMinus,
-} from "lucide-react";
-import { getWorkoutStreak, getTotalStats, db } from "@/db";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { useAuthStore } from "@/store/useAuthStore";
-import { useSocialStore } from "@/store/useSocialStore";
-import { signOut, updateProfile, User as FirebaseUser } from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth, storage as firebaseStorage } from "@/lib/firebase";
-import { storage as appStorage } from "@/lib/storage";
-import { pushToCloud } from "@/lib/syncEngine";
-import { useAchievementsStore } from "@/store/useAchievementsStore";
-import { ACHIEVEMENTS } from "@/data/achievements";
-import AchievementBadge from "@/components/AchievementBadge";
-import ChallengesSection from "@/components/ChallengesSection";
-import { Trophy, Swords, Sparkles, Filter, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
-import { useToastStore } from "@/store/useToastStore";
-import { Button } from "@/components/ui/Button";
-import { uid } from "@/utils/id";
-import { cn } from "@/utils/cn";
+} from 'lucide-react';
+import { getWorkoutStreak, getTotalStats, workoutRepository, bodyRepository } from '@/db';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useSocialStore } from '@/store/useSocialStore';
+import { signOut, updateProfile, User as FirebaseUser } from 'firebase/auth';
+import { auth, getStorageInstance } from '@/lib/firebase';
+import { storage as appStorage } from '@/lib/storage';
+import { pushToCloud } from '@/lib/syncEngine';
+import { useAchievementsStore } from '@/store/useAchievementsStore';
+import { ACHIEVEMENTS } from '@/data/achievements';
+import AchievementBadge from '@/components/AchievementBadge';
+import ChallengesSection from '@/components/ChallengesSection';
+import {
+  Trophy,
+  Swords,
+  Sparkles,
+  Filter,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import { useToastStore } from '@/store/useToastStore';
+import { Button } from '@/components/ui/Button';
+import { uid } from '@/utils/id';
+import { cn } from '@/utils/cn';
 
 // Cyberpunk themed illustrations for profile & metrics
-import profileBgImg from "@/assets/images/profile_bg_new_1784774520340.jpg";
-import workoutMetricImg from "@/assets/images/workout_metric_new_1784774532871.jpg";
-import streakMetricImg from "@/assets/images/streak_metric_new_1784774546452.jpg";
-import weightMetricImg from "@/assets/images/weight_metric_new_1784774560429.jpg";
+import profileBgImg from '@/assets/images/profile_bg_new_1784774520340.jpg';
+import workoutMetricImg from '@/assets/images/workout_metric_new_1784774532871.jpg';
+import streakMetricImg from '@/assets/images/streak_metric_new_1784774546452.jpg';
+import weightMetricImg from '@/assets/images/weight_metric_new_1784774560429.jpg';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" as const },
+    transition: { delay: i * 0.1, duration: 0.4, ease: 'easeOut' as const },
   }),
 };
 
@@ -54,7 +61,7 @@ export default function ProfilePage() {
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
   const ramadanMode = useSettingsStore((s) => s.ramadanMode);
   const language = useSettingsStore((s) => s.language);
-  const isAr = language === "ar";
+  const isAr = language === 'ar';
   const { user, isGuest } = useAuthStore();
   const { following, loadFollowing, follow, unfollow } = useSocialStore();
   const [syncing, setSyncing] = useState(false);
@@ -62,27 +69,31 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { unlockedList, loadUnlocked } = useAchievementsStore();
 
-  const [activeTabSection, setActiveTabSection] = useState<"achievements" | "challenges">("achievements");
-  const [achCategory, setAchCategory] = useState<"all" | "milestones" | "streaks" | "volume" | "lifestyle" | "records" | "social">("all");
+  const [activeTabSection, setActiveTabSection] = useState<'achievements' | 'challenges'>(
+    'achievements',
+  );
+  const [achCategory, setAchCategory] = useState<
+    'all' | 'milestones' | 'streaks' | 'volume' | 'lifestyle' | 'records' | 'social'
+  >('all');
   const [showAllAchievements, setShowAllAchievements] = useState(false);
   const [achProgressMap, setAchProgressMap] = useState<Record<string, number>>({});
 
   const [avatarEmoji, setAvatarEmoji] = useState(() => {
     try {
-      return appStorage.getString("profile_avatar", "🏋️‍♂️") || "🏋️‍♂️";
+      return appStorage.getString('profile_avatar', '🏋️‍♂️') || '🏋️‍♂️';
     } catch {
-      return "🏋️‍♂️";
+      return '🏋️‍♂️';
     }
   });
 
-  const emojis = ["🏋️‍♂️", "🏋️‍♀️", "💪", "🏃‍♂️", "🏃‍♀️", "🤸‍♂️", "🤸‍♀️", "🦁", "⚡", "🔥"];
+  const emojis = ['🏋️‍♂️', '🏋️‍♀️', '💪', '🏃‍♂️', '🏃‍♀️', '🤸‍♂️', '🤸‍♀️', '🦁', '⚡', '🔥'];
 
   useEffect(() => {
     async function loadData() {
       const [streakData, statsData, measurements] = await Promise.all([
         getWorkoutStreak(),
         getTotalStats(),
-        db.bodyMeasurements.orderBy("date").reverse().first(),
+        bodyRepository.latestMeasurement(),
       ]);
 
       setStreak(streakData);
@@ -119,48 +130,66 @@ export default function ProfilePage() {
     const nextIndex = (currentIndex + 1) % emojis.length;
     const nextEmoji = emojis[nextIndex];
     setAvatarEmoji(nextEmoji);
-    appStorage.set("profile_avatar", nextEmoji);
-    useToastStore.getState().addToast("success", isAr ? "غيرنا الصورة الرمزية بنجاح! 😎" : "Avatar changed successfully! 😎");
+    appStorage.set('profile_avatar', nextEmoji);
+    useToastStore
+      .getState()
+      .addToast(
+        'success',
+        isAr ? 'غيرنا الصورة الرمزية بنجاح! 😎' : 'Avatar changed successfully! 😎',
+      );
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user || isGuest || !firebaseStorage) return;
+    if (!file || !user || isGuest) return;
 
     setIsUploading(true);
     try {
+      const firebaseStorage = await getStorageInstance();
+      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
       const storageRef = ref(firebaseStorage, `profiles/${user.uid}/avatar_${Date.now()}`);
       await uploadBytes(storageRef, file);
       const photoURL = await getDownloadURL(storageRef);
-      
+
       await updateProfile(user as FirebaseUser, { photoURL });
-      
+
       // Force refresh user in store
       useAuthStore.getState().setUser({ ...(user as FirebaseUser), photoURL });
-      
-      // Update public profile
-      const { socialService } = await import("@/services/socialService");
-      await socialService.updatePublicProfile(user.uid, user.displayName || "Unknown Athlete", photoURL);
 
-      useToastStore.getState().addToast("success", isAr ? "تم تحديث صورتك الشخصية! ✨" : "Profile photo updated! ✨");
+      // Update public profile
+      const { socialService } = await import('@/services/socialService');
+      await socialService.updatePublicProfile(
+        user.uid,
+        user.displayName || 'Unknown Athlete',
+        photoURL,
+      );
+
+      useToastStore
+        .getState()
+        .addToast('success', isAr ? 'تم تحديث صورتك الشخصية! ✨' : 'Profile photo updated! ✨');
     } catch (error) {
-      console.error("Upload failed:", error);
-      useToastStore.getState().addToast("error", isAr ? "فشل رفع الصورة. حاول تاني" : "Failed to upload photo. Try again.");
+      console.error('Upload failed:', error);
+      useToastStore
+        .getState()
+        .addToast(
+          'error',
+          isAr ? 'فشل رفع الصورة. حاول تاني' : 'Failed to upload photo. Try again.',
+        );
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleFreezeStreak = async () => {
-    const confirmMsg = isAr 
-      ? "عايز تجمد الستريك للنهاردة؟ ده هيضيف حصة وهمية عشان يحمي الاستمرارية بتاعتك من غير ما يأثر على أرقام وحجم تمرينك."
-      : "Freeze your streak for today? This adds a dummy session to protect your streak without adding to your volume.";
+    const confirmMsg = isAr
+      ? 'عايز تجمد الستريك للنهاردة؟ ده هيضيف حصة وهمية عشان يحمي الاستمرارية بتاعتك من غير ما يأثر على أرقام وحجم تمرينك.'
+      : 'Freeze your streak for today? This adds a dummy session to protect your streak without adding to your volume.';
 
     if (confirm(confirmMsg)) {
       const dbDate = new Date().toISOString();
-      await db.workoutSessions.add({
+      await workoutRepository.add({
         id: uid(),
-        name: isAr ? "تجميد الستريك ❄️" : "Streak Freeze ❄️",
+        name: isAr ? 'تجميد الستريك ❄️' : 'Streak Freeze ❄️',
         date: dbDate,
         duration: 0,
         exercises: [],
@@ -171,7 +200,10 @@ export default function ProfilePage() {
       });
       useToastStore
         .getState()
-        .addToast("success", isAr ? "تم تجميد الستريك للنهاردة! ❄️" : "Streak frozen for today! ❄️");
+        .addToast(
+          'success',
+          isAr ? 'تم تجميد الستريك للنهاردة! ❄️' : 'Streak frozen for today! ❄️',
+        );
       const streakData = await getWorkoutStreak();
       setStreak(streakData);
     }
@@ -180,28 +212,36 @@ export default function ProfilePage() {
   const menuItems = [
     {
       icon: Scale,
-      label: isAr ? "وزن وقياسات جسمك ⚖️" : "Body Metrics",
+      label: isAr ? 'وزن وقياسات جسمك ⚖️' : 'Body Metrics',
       description: latestWeight
-        ? (isAr ? `${latestWeight} كجم` : `${latestWeight} kg`)
-        : (isAr ? "سجل وزنك ومقاساتك" : "Log your measurements"),
-      color: "text-primary",
-      href: "/body",
+        ? isAr
+          ? `${latestWeight} كجم`
+          : `${latestWeight} kg`
+        : isAr
+          ? 'سجل وزنك ومقاساتك'
+          : 'Log your measurements',
+      color: 'text-primary',
+      href: '/body',
     },
     {
       icon: Camera,
-      label: isAr ? "صور التطور والمقارنة 📸" : "Progress Photos",
-      description: isAr ? "تابع تغيير شكل جسمك" : "Track your transformation",
-      color: "text-warning",
-      href: "/body",
+      label: isAr ? 'صور التطور والمقارنة 📸' : 'Progress Photos',
+      description: isAr ? 'تابع تغيير شكل جسمك' : 'Track your transformation',
+      color: 'text-warning',
+      href: '/body',
     },
     {
       icon: Settings,
-      label: isAr ? "إعدادات الأبلكيشن ⚙️" : "Settings",
+      label: isAr ? 'إعدادات الأبلكيشن ⚙️' : 'Settings',
       description: ramadanMode
-        ? (isAr ? "وضع رمضان شغال 🌙" : "Ramadan Mode Active 🌙")
-        : (isAr ? "ظبط الأبلكيشن على مزاجك" : "Customize application"),
-      color: "text-text-secondary",
-      href: "/settings",
+        ? isAr
+          ? 'وضع رمضان شغال 🌙'
+          : 'Ramadan Mode Active 🌙'
+        : isAr
+          ? 'ظبط الأبلكيشن على مزاجك'
+          : 'Customize application',
+      color: 'text-text-secondary',
+      href: '/settings',
     },
   ];
 
@@ -210,14 +250,14 @@ export default function ProfilePage() {
     const level = Math.floor(workouts / 5) + 1;
     const xp = workouts % 5;
     const progress = (xp / 5) * 100;
-    
-    let title = isAr ? "عضو جديد 🔥" : "New Member 🔥";
-    if (level >= 3 && level <= 5) title = isAr ? "مواظب الصالة 💪" : "Gym Regular 💪";
-    else if (level >= 6 && level <= 10) title = isAr ? "وحش التمرين 🦁" : "Workout Beast 🦁";
-    else if (level >= 11 && level <= 20) title = isAr ? "فورمة الساحل 🏝️" : "Shredded Form 🏝️";
-    else if (level >= 21 && level <= 50) title = isAr ? "كابتن حقيقي 🎖️" : "True Captain 🎖️";
-    else if (level > 50) title = isAr ? "أسطورة الجيم 👑" : "Gym Legend 👑";
-    
+
+    let title = isAr ? 'عضو جديد 🔥' : 'New Member 🔥';
+    if (level >= 3 && level <= 5) title = isAr ? 'مواظب الصالة 💪' : 'Gym Regular 💪';
+    else if (level >= 6 && level <= 10) title = isAr ? 'وحش التمرين 🦁' : 'Workout Beast 🦁';
+    else if (level >= 11 && level <= 20) title = isAr ? 'فورمة الساحل 🏝️' : 'Shredded Form 🏝️';
+    else if (level >= 21 && level <= 50) title = isAr ? 'كابتن حقيقي 🎖️' : 'True Captain 🎖️';
+    else if (level > 50) title = isAr ? 'أسطورة الجيم 👑' : 'Gym Legend 👑';
+
     return { level, progress, xp, nextLevelXp: 5, title };
   };
 
@@ -227,39 +267,39 @@ export default function ProfilePage() {
     if (!isAr) return { title: enTitle, desc: enDesc };
     const map: Record<string, { title: string; desc: string }> = {
       first_workout: {
-        title: "أول خطوة 🏋️‍♂️",
-        desc: "سجلت أول تمرينة في رحلة الفورمة.",
+        title: 'أول خطوة 🏋️‍♂️',
+        desc: 'سجلت أول تمرينة في رحلة الفورمة.',
       },
-      "3_day_streak": {
-        title: "جامد وعافر 🔥",
-        desc: "سجلت ٣ أيام تمرين ورا بعض.",
+      '3_day_streak': {
+        title: 'جامد وعافر 🔥',
+        desc: 'سجلت ٣ أيام تمرين ورا بعض.',
       },
-      "7_day_streak": {
-        title: "محدش يقدر يوقفك ⚡",
-        desc: "حققت ستريك ٧ أيام متواصلة.",
+      '7_day_streak': {
+        title: 'محدش يقدر يوقفك ⚡',
+        desc: 'حققت ستريك ٧ أيام متواصلة.',
       },
-      "10k_tonnage": {
-        title: "وحش الأوزان 💪",
-        desc: "شلت ١٠,٠٠٠ كجم توتال في أسبوع واحد.",
+      '10k_tonnage': {
+        title: 'وحش الأوزان 💪',
+        desc: 'شلت ١٠,٠٠٠ كجم توتال في أسبوع واحد.',
       },
-      "100_workouts": {
-        title: "البطل المحترف 👑",
-        desc: "قفلت ١٠٠ تمرينة، مبروك اللقب!",
+      '100_workouts': {
+        title: 'البطل المحترف 👑',
+        desc: 'قفلت ١٠٠ تمرينة، مبروك اللقب!',
       },
       night_owl: {
-        title: "خفاش الجيم 🦉",
-        desc: "اتمرنت في نص الليل (من ١٢ لـ ٤ الفجر).",
+        title: 'خفاش الجيم 🦉',
+        desc: 'اتمرنت في نص الليل (من ١٢ لـ ٤ الفجر).',
       },
       early_bird: {
-        title: "وحش الصبح بدري 🌅",
-        desc: "صحيت وفجرت طاقة من ٤ لـ ٨ الصبح.",
+        title: 'وحش الصبح بدري 🌅',
+        desc: 'صحيت وفجرت طاقة من ٤ لـ ٨ الصبح.',
       },
     };
     return map[id] || { title: enTitle, desc: enDesc };
   };
 
   return (
-    <div className="space-y-6" dir={isAr ? "rtl" : "ltr"}>
+    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
       {/* ── Page Title ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -267,10 +307,10 @@ export default function ProfilePage() {
         transition={{ duration: 0.4 }}
       >
         <h1 className="text-xl font-bold text-text-primary uppercase tracking-wider">
-          {isAr ? "بروفايلك يا بطل 👤" : "Profile"}
+          {isAr ? 'بروفايلك يا بطل 👤' : 'Profile'}
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          {isAr ? "تابع أرقامك، قوتك، وتطور فورمتك من هنا" : "Manage your info and track progress"}
+          {isAr ? 'تابع أرقامك، قوتك، وتطور فورمتك من هنا' : 'Manage your info and track progress'}
         </p>
       </motion.div>
 
@@ -309,17 +349,17 @@ export default function ProfilePage() {
               onClick={handleCycleAvatar}
               disabled={isUploading}
               className={cn(
-                "flex h-20 w-20 items-center justify-center rounded-full bg-bg-surface-hover shrink-0 text-3xl border border-border/40 shadow-xl hover:border-primary/40 active:scale-95 transition-all relative group overflow-hidden",
-                isUploading && "opacity-50 cursor-wait"
+                'flex h-20 w-20 items-center justify-center rounded-full bg-bg-surface-hover shrink-0 text-3xl border border-border/40 shadow-xl hover:border-primary/40 active:scale-95 transition-all relative group overflow-hidden',
+                isUploading && 'opacity-50 cursor-wait',
               )}
-              title={isAr ? "اضغط لتغيير الصورة الشخصية" : "Click to change profile photo"}
+              title={isAr ? 'اضغط لتغيير الصورة الشخصية' : 'Click to change profile photo'}
             >
               {isUploading ? (
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
               ) : user?.photoURL ? (
                 <img
                   src={user.photoURL}
-                  alt={user.displayName || ""}
+                  alt={user.displayName || ''}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -334,7 +374,7 @@ export default function ProfilePage() {
                 className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-warning text-xs border-2 border-bg-surface"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
               >
                 🌙
               </motion.div>
@@ -343,20 +383,22 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black text-text-primary truncate">
-                {user?.displayName || user?.email?.split('@')[0] || (isAr ? "وحش ري‌ليفت ⚡" : "ReLift User ⚡")}
+                {user?.displayName ||
+                  user?.email?.split('@')[0] ||
+                  (isAr ? 'وحش ري‌ليفت ⚡' : 'ReLift User ⚡')}
               </h2>
             </div>
             <div className="flex items-center gap-3 mt-1">
               <div className="flex flex-col">
                 <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest">
-                  {isAr ? "المتابعين" : "FOLLOWERS"}
+                  {isAr ? 'المتابعين' : 'FOLLOWERS'}
                 </span>
                 <span className="text-sm font-black text-text-primary">0</span>
               </div>
               <div className="h-6 w-px bg-border/40" />
               <div className="flex flex-col">
                 <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest">
-                  {isAr ? "تتابع" : "FOLLOWING"}
+                  {isAr ? 'تتابع' : 'FOLLOWING'}
                 </span>
                 <span className="text-sm font-black text-text-primary">{following.length}</span>
               </div>
@@ -374,7 +416,7 @@ export default function ProfilePage() {
               <span className="text-text-primary text-[12px] font-semibold">{levelInfo.title}</span>
             </span>
             <span className="text-text-muted text-[10px] font-mono">
-              {levelInfo.xp} / {levelInfo.nextLevelXp} {isAr ? "لتطوير المستوى" : "to next level"}
+              {levelInfo.xp} / {levelInfo.nextLevelXp} {isAr ? 'لتطوير المستوى' : 'to next level'}
             </span>
           </div>
           <div className="h-2 w-full bg-bg-elevated rounded-full overflow-hidden border border-border/10">
@@ -382,7 +424,7 @@ export default function ProfilePage() {
               className="h-full bg-gradient-to-r from-primary to-lime-400"
               initial={{ width: 0 }}
               animate={{ width: `${levelInfo.progress}%` }}
-              transition={{ duration: 1, ease: "easeOut" }}
+              transition={{ duration: 1, ease: 'easeOut' }}
             />
           </div>
         </div>
@@ -400,7 +442,13 @@ export default function ProfilePage() {
                 variant="outline"
                 className="flex-1 py-2.5 text-sm"
               >
-                {syncing ? (isAr ? "بالمزامنة..." : "Syncing...") : (isAr ? "ارفع أرقامك ☁️" : "Sync Now")}
+                {syncing
+                  ? isAr
+                    ? 'بالمزامنة...'
+                    : 'Syncing...'
+                  : isAr
+                    ? 'ارفع أرقامك ☁️'
+                    : 'Sync Now'}
               </Button>
               <Button
                 onClick={() => {
@@ -409,16 +457,13 @@ export default function ProfilePage() {
                 variant="danger"
                 className="flex-1 py-2.5 text-sm"
               >
-                {isAr ? "تسجيل خروج 🚶‍♂️" : "Logout"}
+                {isAr ? 'تسجيل خروج 🚶‍♂️' : 'Logout'}
               </Button>
             </>
           ) : (
             <Link to="/auth" className="w-full">
-              <Button
-                variant="primary"
-                className="w-full h-10"
-              >
-                {isAr ? "دخول / حساب جديد 👋" : "Login / Signup"}
+              <Button variant="primary" className="w-full h-10">
+                {isAr ? 'دخول / حساب جديد 👋' : 'Login / Signup'}
               </Button>
             </Link>
           )}
@@ -448,9 +493,11 @@ export default function ProfilePage() {
 
           <div className="relative z-10 flex flex-col items-center gap-1 w-full h-full justify-between">
             <Dumbbell className="h-5 w-5 text-primary filter drop-shadow-[0_0_8px_rgba(204,255,0,0.4)]" />
-            <p className="text-xl sm:text-2xl font-black text-text-primary italic tracking-tight">{totalWorkouts}</p>
+            <p className="text-xl sm:text-2xl font-black text-text-primary italic tracking-tight">
+              {totalWorkouts}
+            </p>
             <p className="text-[9px] sm:text-[10px] text-text-muted font-bold uppercase tracking-wider">
-              {isAr ? "التمارين" : "Workouts"}
+              {isAr ? 'التمارين' : 'Workouts'}
             </p>
           </div>
         </div>
@@ -470,16 +517,18 @@ export default function ProfilePage() {
 
           <div className="relative z-10 flex flex-col items-center gap-1 w-full h-full justify-between">
             <Flame className="h-5 w-5 text-warning filter drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
-            <p className="text-xl sm:text-2xl font-black text-text-primary italic tracking-tight">{streak}</p>
+            <p className="text-xl sm:text-2xl font-black text-text-primary italic tracking-tight">
+              {streak}
+            </p>
             <div className="flex flex-col items-center w-full">
               <p className="text-[9px] sm:text-[10px] text-text-muted font-bold uppercase tracking-wider mb-1 leading-none">
-                {isAr ? "الستريك" : "Streak"}
+                {isAr ? 'الستريك' : 'Streak'}
               </p>
               <button
                 onClick={handleFreezeStreak}
                 className="text-[8px] sm:text-[9px] bg-sky-500/10 text-sky-400 border border-sky-500/25 px-2 py-0.5 rounded-full hover:bg-sky-500/20 active:scale-95 transition-all uppercase tracking-wider font-bold relative z-20"
               >
-                {isAr ? "تجميد ❄️" : "Freeze"}
+                {isAr ? 'تجميد ❄️' : 'Freeze'}
               </button>
             </div>
           </div>
@@ -501,10 +550,10 @@ export default function ProfilePage() {
           <div className="relative z-10 flex flex-col items-center gap-1 w-full h-full justify-between">
             <Scale className="h-5 w-5 text-success filter drop-shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
             <p className="text-xl sm:text-2xl font-black text-text-primary italic tracking-tight">
-              {latestWeight ?? "—"}
+              {latestWeight ?? '—'}
             </p>
             <p className="text-[9px] sm:text-[10px] text-text-muted font-bold uppercase tracking-wider">
-              {latestWeight ? (isAr ? "كجم" : "KG") : (isAr ? "سجل وزنك" : "Weight")}
+              {latestWeight ? (isAr ? 'كجم' : 'KG') : isAr ? 'سجل وزنك' : 'Weight'}
             </p>
           </div>
         </div>
@@ -521,33 +570,33 @@ export default function ProfilePage() {
         {/* Toggle Section Tabs */}
         <div className="flex p-1 bg-bg-surface rounded-2xl border border-border/60 shadow-inner">
           <button
-            onClick={() => setActiveTabSection("achievements")}
+            onClick={() => setActiveTabSection('achievements')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer select-none",
-              activeTabSection === "achievements"
-                ? "bg-primary text-primary-text shadow-[0_0_12px_rgba(204,255,0,0.3)]"
-                : "text-text-muted hover:text-text-primary"
+              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer select-none',
+              activeTabSection === 'achievements'
+                ? 'bg-primary text-primary-text shadow-[0_0_12px_rgba(204,255,0,0.3)]'
+                : 'text-text-muted hover:text-text-primary',
             )}
           >
             <Trophy className="w-4 h-4 stroke-[2.2]" />
-            <span>{isAr ? "الإنجازات والبطولات 🏆" : "Achievements"}</span>
+            <span>{isAr ? 'الإنجازات والبطولات 🏆' : 'Achievements'}</span>
           </button>
           <button
-            onClick={() => setActiveTabSection("challenges")}
+            onClick={() => setActiveTabSection('challenges')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer select-none",
-              activeTabSection === "challenges"
-                ? "bg-primary text-primary-text shadow-[0_0_12px_rgba(204,255,0,0.3)]"
-                : "text-text-muted hover:text-text-primary"
+              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer select-none',
+              activeTabSection === 'challenges'
+                ? 'bg-primary text-primary-text shadow-[0_0_12px_rgba(204,255,0,0.3)]'
+                : 'text-text-muted hover:text-text-primary',
             )}
           >
             <Swords className="w-4 h-4 stroke-[2.2]" />
-            <span>{isAr ? "التحديات الرياضية ⚔️" : "Fitness Quests"}</span>
+            <span>{isAr ? 'التحديات الرياضية ⚔️' : 'Fitness Quests'}</span>
           </button>
         </div>
 
         {/* SECTION 1: ACHIEVEMENTS */}
-        {activeTabSection === "achievements" ? (
+        {activeTabSection === 'achievements' ? (
           <div className="space-y-4">
             {/* Summary & Category Chips */}
             <div className="flex flex-col gap-3">
@@ -557,12 +606,12 @@ export default function ProfilePage() {
                     <Trophy className="w-4 h-4" />
                   </div>
                   <span className="text-xs font-black uppercase text-text-primary">
-                    {isAr ? "نسبة إنجاز الأوسمة" : "Unlocked Badges"}
+                    {isAr ? 'نسبة إنجاز الأوسمة' : 'Unlocked Badges'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
-                    {unlockedList.length} / {ACHIEVEMENTS.length} {isAr ? "مفتوح" : "Unlocked"}
+                    {unlockedList.length} / {ACHIEVEMENTS.length} {isAr ? 'مفتوح' : 'Unlocked'}
                   </span>
                 </div>
               </div>
@@ -570,22 +619,22 @@ export default function ProfilePage() {
               {/* Category Pills */}
               <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
                 {[
-                  { id: "all", label: isAr ? "الكل" : "All" },
-                  { id: "milestones", label: isAr ? "محطات 🎯" : "Milestones" },
-                  { id: "streaks", label: isAr ? "استمرارية 🔥" : "Streaks" },
-                  { id: "volume", label: isAr ? "أوزان 🏋️‍♂️" : "Volume" },
-                  { id: "lifestyle", label: isAr ? "أوقات ⏱️" : "Lifestyle" },
-                  { id: "records", label: isAr ? "أرقام قياسية 🏆" : "Records" },
-                  { id: "social", label: isAr ? "مجتمع 🥗" : "Social" },
+                  { id: 'all', label: isAr ? 'الكل' : 'All' },
+                  { id: 'milestones', label: isAr ? 'محطات 🎯' : 'Milestones' },
+                  { id: 'streaks', label: isAr ? 'استمرارية 🔥' : 'Streaks' },
+                  { id: 'volume', label: isAr ? 'أوزان 🏋️‍♂️' : 'Volume' },
+                  { id: 'lifestyle', label: isAr ? 'أوقات ⏱️' : 'Lifestyle' },
+                  { id: 'records', label: isAr ? 'أرقام قياسية 🏆' : 'Records' },
+                  { id: 'social', label: isAr ? 'مجتمع 🥗' : 'Social' },
                 ].map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setAchCategory(cat.id as any)}
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 select-none",
+                      'px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 select-none',
                       achCategory === cat.id
-                        ? "bg-bg-surface-hover text-primary border border-primary/40 shadow-sm"
-                        : "bg-bg-surface text-text-muted hover:text-text-primary border border-border/40"
+                        ? 'bg-bg-surface-hover text-primary border border-primary/40 shadow-sm'
+                        : 'bg-bg-surface text-text-muted hover:text-text-primary border border-border/40',
                     )}
                   >
                     {cat.label}
@@ -597,7 +646,7 @@ export default function ProfilePage() {
             {/* Achievements Grid */}
             {(() => {
               const filteredList = ACHIEVEMENTS.filter((ach) =>
-                achCategory === "all" ? true : ach.category === achCategory
+                achCategory === 'all' ? true : ach.category === achCategory,
               ).sort((a, b) => {
                 const unlockedA = unlockedList.some((u) => u.achievementId === a.id);
                 const unlockedB = unlockedList.some((u) => u.achievementId === b.id);
@@ -608,17 +657,13 @@ export default function ProfilePage() {
                 return progB - progA;
               });
 
-              const displayedList = showAllAchievements
-                ? filteredList
-                : filteredList.slice(0, 6);
+              const displayedList = showAllAchievements ? filteredList : filteredList.slice(0, 6);
 
               return (
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {displayedList.map((ach) => {
-                      const unlocked = unlockedList.find(
-                        (u) => u.achievementId === ach.id
-                      );
+                      const unlocked = unlockedList.find((u) => u.achievementId === ach.id);
                       const title = isAr ? ach.titleAr : ach.title;
                       const description = isAr ? ach.descriptionAr : ach.description;
                       const progressPct = achProgressMap[ach.id];
@@ -648,10 +693,12 @@ export default function ProfilePage() {
                       <Sparkles className="w-4 h-4 text-primary animate-pulse" />
                       <span>
                         {showAllAchievements
-                          ? (isAr ? "إخفاء باقي الأوسمة ⬆️" : "Collapse Badges ⬆️")
-                          : (isAr
-                              ? `عرض كامل الأوسمة والميداليات (${filteredList.length}) 🏆`
-                              : `Show All Badges (${filteredList.length}) 🏆`)}
+                          ? isAr
+                            ? 'إخفاء باقي الأوسمة ⬆️'
+                            : 'Collapse Badges ⬆️'
+                          : isAr
+                            ? `عرض كامل الأوسمة والميداليات (${filteredList.length}) 🏆`
+                            : `Show All Badges (${filteredList.length}) 🏆`}
                       </span>
                       {showAllAchievements ? (
                         <ChevronUp className="w-4 h-4" />
@@ -686,17 +733,17 @@ export default function ProfilePage() {
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bg-elevated">
                   <Icon className={`h-5 w-5 ${item.color}`} />
                 </div>
-                <div className={`flex-1 min-w-0 ${isAr ? "text-right" : "text-left"}`}>
+                <div className={`flex-1 min-w-0 ${isAr ? 'text-right' : 'text-left'}`}>
                   <p className="text-sm font-medium text-text-primary truncate uppercase tracking-wider">
                     {item.label}
                   </p>
                   {item.description && (
-                    <p className="text-xs text-text-muted truncate">
-                      {item.description}
-                    </p>
+                    <p className="text-xs text-text-muted truncate">{item.description}</p>
                   )}
                 </div>
-                <ChevronRight className={`h-5 w-5 text-text-muted shrink-0 ${isAr ? "rotate-180" : ""}`} />
+                <ChevronRight
+                  className={`h-5 w-5 text-text-muted shrink-0 ${isAr ? 'rotate-180' : ''}`}
+                />
               </div>
             </Link>
           );
@@ -715,10 +762,10 @@ export default function ProfilePage() {
             <span className="text-2xl">🌙</span>
             <div className="min-w-0">
               <p className="text-sm font-bold text-warning uppercase tracking-wider truncate">
-                {isAr ? "رمضان كريم يا بطل! 🌙" : "Ramadan Mubarak!"}
+                {isAr ? 'رمضان كريم يا بطل! 🌙' : 'Ramadan Mubarak!'}
               </p>
               <p className="text-xs text-text-muted truncate">
-                {isAr ? "حافظ على قوتك وفورمتك في الشهر الكريم" : "Stay fit during the holy month"}
+                {isAr ? 'حافظ على قوتك وفورمتك في الشهر الكريم' : 'Stay fit during the holy month'}
               </p>
             </div>
           </div>
@@ -738,4 +785,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

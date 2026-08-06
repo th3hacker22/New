@@ -1,137 +1,124 @@
-import { db as firestoreDb } from "@/lib/firebase";
-import { db as dexieDb } from "@/db/index";
-import { doc, collection, getDocs, writeBatch } from "firebase/firestore";
-import { useToastStore } from "@/store/useToastStore";
+/**
+ * Cloud sync — push/pull local Dexie data to Firestore.
+ *
+ * Firestore is imported dynamically here because this module is referenced by
+ * many stores; a static import would drag the ~400kb firestore chunk into the
+ * initial bundle even for users who never open the sync flow. Lazy import
+ * defers it until a sync actually runs (bundle-defer-third-party).
+ */
+import { db as dexieDb } from '@/db/index';
+import { useToastStore } from '@/store/useToastStore';
 
-const COLLECTION_MAP = {
-  workoutSessions: "workouts",
-  bodyMeasurements: "measurements",
-  routines: "routines",
-  foodEntries: "foodEntries",
-  nutritionGoals: "nutritionGoals",
-  unlockedAchievements: "unlockedAchievements",
+const COLLECTION_MAP: Record<string, string> = {
+  workoutSessions: 'workouts',
+  bodyMeasurements: 'measurements',
+  routines: 'routines',
+  foodEntries: 'foodEntries',
+  nutritionGoals: 'nutritionGoals',
+  unlockedAchievements: 'unlockedAchievements',
 };
 
-// Helper to recursively remove undefined fields so Firestore doesn't crash
-function cleanUndefined<T>(obj: T): T {
-  if (obj === null || obj === undefined) {
-    return null as any;
-  }
-  if (Array.isArray(obj)) {
-    return obj.map((item) => cleanUndefined(item)) as any;
-  }
-  if (typeof obj === "object") {
-    const cleaned: any = {};
-    for (const key of Object.keys(obj)) {
-      const val = (obj as any)[key];
-      if (val !== undefined) {
-        cleaned[key] = cleanUndefined(val);
-      }
+function cleanUndefined<T>(value: T): T {
+  if (value === null || value === undefined) return null as T;
+  if (Array.isArray(value)) return value.map((item) => cleanUndefined(item)) as T;
+  if (typeof value === 'object') {
+    const cleaned: Record<string, unknown> = {};
+    for (const key of Object.keys(value as Record<string, unknown>)) {
+      const v = (value as Record<string, unknown>)[key];
+      if (v !== undefined) cleaned[key] = cleanUndefined(v);
     }
-    return cleaned;
+    return cleaned as T;
   }
-  return obj;
+  return value;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DexieTable = {
+  toArray: () => Promise<any[]>;
+  bulkPut: (r: any[]) => Promise<unknown>;
+  bulkDelete: (ids: string[]) => Promise<unknown>;
+};
+
+async function tableFor(name: string): Promise<DexieTable> {
+  return (dexieDb as unknown as Record<string, DexieTable>)[name];
 }
 
 export async function pushToCloud(userId: string) {
-  if (!firestoreDb) return;
+  const { getDb } = await import('@/lib/firebase');
+  const firestore = await getDb();
+  const { doc, writeBatch } = await import('firebase/firestore');
 
   try {
-    for (const [localTable, remoteCollection] of Object.entries(
-      COLLECTION_MAP,
-    )) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const records = await (dexieDb as any)[localTable].toArray();
-      let batch = writeBatch(firestoreDb);
+    for (const [localTable, remoteCollection] of Object.entries(COLLECTION_MAP)) {
+      const records = await (await tableFor(localTable)).toArray();
+      let batch = writeBatch(firestore);
       let count = 0;
 
       for (const record of records) {
         if (!record.id) continue;
-        const docRef = doc(
-          firestoreDb,
-          `users/${userId}/${remoteCollection}/${record.id}`,
-        );
-        const cleanedRecord = cleanUndefined(record);
-        batch.set(docRef, cleanedRecord);
+        const docRef = doc(firestore, `users/${userId}/${remoteCollection}/${record.id}`);
+        batch.set(docRef, cleanUndefined(record));
         count++;
-
         if (count >= 450) {
           await batch.commit();
-          batch = writeBatch(firestoreDb);
+          batch = writeBatch(firestore);
           count = 0;
         }
       }
-
-      if (count > 0) {
-        await batch.commit();
-      }
+      if (count > 0) await batch.commit();
     }
   } catch (err) {
-    console.error("Push to cloud failed:", err);
-    useToastStore
-      .getState()
-      .addToast("error", "Sync to cloud failed, will retry later.");
+    console.error('Push to cloud failed:', err);
+    useToastStore.getState().addToast('error', 'Sync to cloud failed, will retry later.');
     throw err;
   }
 }
 
 export async function pullFromCloud(userId: string) {
-  if (!firestoreDb) return;
+  const { getDb } = await import('@/lib/firebase');
+  const firestore = await getDb();
+  const { collection, getDocs } = await import('firebase/firestore');
 
   try {
-    for (const [localTable, remoteCollection] of Object.entries(
-      COLLECTION_MAP,
-    )) {
-      const snapshot = await getDocs(
-        collection(firestoreDb, `users/${userId}/${remoteCollection}`),
-      );
-
+    for (const [localTable, remoteCollection] of Object.entries(COLLECTION_MAP)) {
+      const snapshot = await getDocs(collection(firestore, `users/${userId}/${remoteCollection}`));
+      const localCollection = await tableFor(localTable);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const localCollection = (dexieDb as any)[localTable];
       const toPut: any[] = [];
       const toDelete: string[] = [];
 
       const localRecordsArr = await localCollection.toArray();
-      const localRecords = new Map(localRecordsArr.map((r: any) => [r.id, r]));
+      const localRecords = new Map(localRecordsArr.map((r: { id: string }) => [r.id, r]));
 
       snapshot.forEach((docSnap) => {
-        const remoteRecord = docSnap.data() as any;
-        const localRecord = localRecords.get(remoteRecord.id) as any;
-
-        // Last write wins
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const remote = docSnap.data() as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const local = localRecords.get(remote.id) as any;
         if (
-          !localRecord ||
-          new Date(remoteRecord.updatedAt || 0).getTime() >
-            new Date(localRecord.updatedAt || 0).getTime()
+          !local ||
+          new Date(remote.updatedAt || 0).getTime() > new Date(local.updatedAt || 0).getTime()
         ) {
-          if (remoteRecord.deleted) {
-            toDelete.push(remoteRecord.id);
-          } else {
-            toPut.push(remoteRecord);
-          }
+          if (remote.deleted) toDelete.push(remote.id);
+          else toPut.push(remote);
         }
       });
 
-      if (toPut.length > 0) {
-        await localCollection.bulkPut(toPut);
-      }
-      if (toDelete.length > 0) {
-        await localCollection.bulkDelete(toDelete);
-      }
+      if (toPut.length) await localCollection.bulkPut(toPut);
+      if (toDelete.length) await localCollection.bulkDelete(toDelete);
     }
   } catch (err) {
-    console.error("Pull from cloud failed:", err);
-    useToastStore.getState().addToast("error", "Sync from cloud failed.");
+    console.error('Pull from cloud failed:', err);
+    useToastStore.getState().addToast('error', 'Sync from cloud failed.');
     throw err;
   }
 }
 
 export async function syncAll(userId: string) {
-  if (!firestoreDb) return;
   try {
     await pullFromCloud(userId);
     await pushToCloud(userId);
   } catch (err) {
-    console.error("Sync all failed:", err);
+    console.error('Sync all failed:', err);
   }
 }
