@@ -28,6 +28,7 @@ import { useNutritionStore } from "@/store/useNutritionStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { MealScanner } from "@/components/nutrition/MealScanner";
 import { useSettingsStore } from "@/store/useSettingsStore";
+import { useTranslation } from "@/i18n";
 import HealthySwapsHelper from "@/components/extras/HealthySwapsHelper";
 import nutritionMacrosImg from "@/assets/images/nutrition_macros_illustration_1784768406683.jpg";
 import breakfastMealImg from "@/assets/images/breakfast_meal_bg_1784776621698.jpg";
@@ -67,57 +68,9 @@ const PRESET_FOODS = [
 ];
 
 export default function NutritionPage() {
-  const { language } = useSettingsStore();
-  const isAr = language === "ar";
+  const { t, isAr } = useTranslation();
 
-  // Translation labels
-  const labels = {
-    title: isAr ? "مركز التغذية" : "Nutrition Hub",
-    subtitle: isAr ? "تتبع سعراتك وماكروز وجباتك" : "Fuel your progress, track macros & log meals",
-    caloriesRemaining: isAr ? "السعرات المتبقية" : "Calories Left",
-    consumed: isAr ? "مستهلك" : "consumed",
-    goal: isAr ? "الهدف" : "Goal",
-    protein: isAr ? "بروتين" : "Protein",
-    carbs: isAr ? "كارب" : "Carbs",
-    fat: isAr ? "دهون" : "Fat",
-    water: isAr ? "الميه" : "Water",
-    waterGoal: isAr ? "الهدف: 3000 مل" : "Goal: 3000 ml",
-    addWater: isAr ? "تسجيل الميه" : "Log Water",
-    reset: isAr ? "إعادة" : "Reset",
-    quickAdd: isAr ? "تسجيل سريع" : "Quick Log Presets",
-    aiLogger: isAr ? "المسجل الذكي ✨" : "AI Smart Log ✨",
-    aiPlaceholder: isAr ? "وصف وجبتك (مثلاً: 3 بيضات، نص افوكادو و 100 جرام شوفان)" : "Describe your meal (e.g., '3 boiled eggs, half an avocado and 100g oats')",
-    aiAnalyze: isAr ? "تحليل بواسطة Gemini" : "Analyze with Gemini",
-    aiAnalyzing: isAr ? "جاري تحليل الطعام..." : "AI is analyzing your food...",
-    aiSuccess: isAr ? "تم تحليل وجبتك!" : "Gemini analyzed your meal!",
-    aiAdd: isAr ? "إضافة للسجل" : "Add to Daily Log",
-    aiReject: isAr ? "إلغاء" : "Cancel",
-    addFood: isAr ? "إضافة يدوية" : "Manual Food Entry",
-    scanMeal: isAr ? "تصوير الوجبة" : "Scan Meal Photo",
-    foodName: isAr ? "اسم الأكل" : "Food Name",
-    calories: isAr ? "السعرات" : "Calories (kcal)",
-    mealType: isAr ? "نوع الوجبة" : "Meal Type",
-    breakfast: isAr ? "فطار" : "Breakfast",
-    lunch: isAr ? "غدا" : "Lunch",
-    dinner: isAr ? "عشا" : "Dinner",
-    snack: isAr ? "سناك" : "Snack",
-    editGoals: isAr ? "تعديل الأهداف" : "Update Nutrition Goals",
-    dailyCalories: isAr ? "هدف السعرات اليومي" : "Daily Calories Goal",
-    save: isAr ? "حفظ" : "Save Changes",
-    cancel: isAr ? "إلغاء" : "Cancel",
-    noEntries: isAr ? "لا توجد وجبات مسجلة اليوم" : "No meals logged for today. Tap below or type to log!",
-    popularFoods: isAr ? "أكلات شائعة" : "Popular Fitness Presets",
-    waterUnit: isAr ? "مل" : "ml",
-    today: isAr ? "اليوم" : "Today",
-    targetMet: isAr ? "تم الوصول للهدف!" : "Target Met!",
-    overLimit: isAr ? "تجاوزت الهدف" : "Over Target",
-    confirmAdd: isAr ? "تمت الإضافة بنجاح!" : "Added successfully!",
-    manualForm: isAr ? "إضافة يدوية" : "Manual Entry",
-    aiResults: isAr ? "نتيجة التحليل" : "Analysis Result",
-    waterTitle: isAr ? "حالة الترطيب" : "Hydration Status",
-    waterLogs: isAr ? "سجل الميه اليومي" : "Daily Water intake",
-    suggestedMeal: isAr ? "وجبة مقترحة" : "Suggested Meal",
-  };
+  const labels = new Proxy({} as any, { get: (_: any, prop: string) => t(`nutrition.${prop}`) }) as Record<string, string>;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAddModal, setShowAddModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -152,22 +105,33 @@ export default function NutritionPage() {
     loadGoal();
   }, [loadGoal]);
 
-  // Water persistence
+  // Water persistence via centralized storage manager
   const [water, setWater] = useState(0);
   useEffect(() => {
-    const saved = localStorage.getItem(`water_intake_${formattedDate}`);
-    setWater(saved ? Number(saved) : 0);
+    try {
+      const { storage } = require("@/lib/storage");
+      const saved = storage.getString(`water_intake_${formattedDate}` as any, "0");
+      setWater(Number(saved) || 0);
+    } catch {
+      setWater(0);
+    }
   }, [formattedDate]);
 
   const handleWaterAdd = (amount: number) => {
     const nextWater = Math.max(0, water + amount);
     setWater(nextWater);
-    localStorage.setItem(`water_intake_${formattedDate}`, String(nextWater));
+    try {
+      const { storage } = require("@/lib/storage");
+      storage.set(`water_intake_${formattedDate}` as any, String(nextWater) as any);
+    } catch {}
   };
 
   const handleWaterReset = () => {
     setWater(0);
-    localStorage.setItem(`water_intake_${formattedDate}`, "0");
+    try {
+      const { storage } = require("@/lib/storage");
+      storage.set(`water_intake_${formattedDate}` as any, "0" as any);
+    } catch {}
   };
 
   const safeGoal = goal || {

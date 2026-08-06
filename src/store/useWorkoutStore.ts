@@ -11,16 +11,11 @@ import { uid } from "@/utils/id";
 import { playWorkoutStartSound, playWorkoutStopSound } from "@/utils/audio";
 
 // ── Helpers ──
+import { storage } from "@/lib/storage";
 
-// ── Get exercises from cache ──
+// ── Get exercises from cache via centralized manager ──
 function getCachedExercises(): Exercise[] {
-  try {
-    const cached = localStorage.getItem("pulse_exercises_cache");
-    if (cached) return JSON.parse(cached);
-  } catch {
-    /* ignore */
-  }
-  return [];
+  return (storage.getExercisesCache() as Exercise[]) || storage.get<Exercise[]>("exercises_cache", [] as any) || [];
 }
 
 // ── Types ──

@@ -1,3 +1,4 @@
+import { storage } from "@/lib/storage";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -366,8 +367,8 @@ export default function WarmupMobilityGenerator({ isOpen, onClose, isAr = false 
       setIsPlaying(false);
       setShowCelebration(true);
       // Increment total warmup count in localStorage
-      const totalWarmups = Number(localStorage.getItem("pulse_total_warmups") || "0") + 1;
-      localStorage.setItem("pulse_total_warmups", String(totalWarmups));
+      const totalWarmups = Number(storage.getString("pulse_total_warmups" as any, "") || "0") + 1;
+      storage.set("pulse_total_warmups" as any, String(totalWarmups as any));
     }
   };
 

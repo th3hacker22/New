@@ -1,3 +1,4 @@
+import { storage } from "@/lib/storage";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
@@ -104,7 +105,7 @@ export default function ExerciseDetailPage() {
   };
 
   const [pinnedNote, setPinnedNote] = useState<string>(() => {
-    return localStorage.getItem(`pulse_pinned_note_${exerciseId}`) || "";
+    return storage.getString(`pulse_pinned_note_${exerciseId}` as any, "") || "";
   });
   const [historyData, setHistoryData] = useState<any[]>([]);
 
@@ -119,7 +120,7 @@ export default function ExerciseDetailPage() {
   const [noteInput, setNoteInput] = useState(pinnedNote);
 
   const handleSaveNote = () => {
-    localStorage.setItem(`pulse_pinned_note_${exerciseId}`, noteInput);
+    storage.set(`pulse_pinned_note_${exerciseId}` as any, noteInput as any);
     setPinnedNote(noteInput);
     setIsEditingNote(false);
   };

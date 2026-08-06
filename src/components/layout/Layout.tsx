@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import ReLiftLogo from "@/components/ReLiftLogo";
+import { useTranslation } from "@/i18n";
 
 function NavItem({ to, icon: Icon, label }: { to: string; icon: any; label: string }) {
   const location = useLocation();
@@ -63,13 +64,12 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const location = useLocation();
   const { language, setLanguage } = useSettingsStore();
+  const { t, isAr } = useTranslation();
   const { user } = useAuthStore();
   const activeWorkout = useWorkoutStore((s) => s.activeWorkout);
   const cancelWorkout = useWorkoutStore((s) => s.cancelWorkout);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  const isAr = language === "ar";
 
   const [showHeader, setShowHeader] = useState(true);
   const lastScrollY = useRef(0);
@@ -404,12 +404,12 @@ export default function Layout({ children }: { children: ReactNode }) {
 
         <nav className="shrink-0 w-full bg-bg-surface/90 backdrop-blur-xl border-t border-border/50 flex flex-col justify-end z-50">
           <div className="flex justify-between items-center h-[4.5rem]">
-            <NavItem to="/" icon={Home} label={isAr ? "الرئيسية" : "Home"} />
-            <NavItem to="/exercises" icon={Dumbbell} label={isAr ? "التمارين" : "Exercises"} />
-            <NavItem to="/feed" icon={Globe} label={isAr ? "الناس" : "Feed"} />
-            <NavItem to="/nutrition" icon={Utensils} label={isAr ? "أكلك" : "Nutrition"} />
-            <NavItem to="/stats" icon={Activity} label={isAr ? "تطورك" : "Stats"} />
-            <NavItem to="/profile" icon={User} label={isAr ? "بروفايلك" : "Profile"} />
+            <NavItem to="/" icon={Home} label={t('nav.home')} />
+            <NavItem to="/exercises" icon={Dumbbell} label={t('nav.exercises')} />
+            <NavItem to="/feed" icon={Globe} label={t('nav.people')} />
+            <NavItem to="/nutrition" icon={Utensils} label={t('nav.nutrition')} />
+            <NavItem to="/stats" icon={Activity} label={t('nav.stats')} />
+            <NavItem to="/profile" icon={User} label={t('nav.profile')} />
           </div>
           <div className="h-[env(safe-area-inset-bottom)] bg-transparent w-full" />
         </nav>

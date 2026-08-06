@@ -1,3 +1,4 @@
+import { storage } from "@/lib/storage";
 import {
   getTotalStats,
   getWorkoutStreak,
@@ -431,11 +432,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     xp: 200,
     iconName: "Share2",
     checkCriteria: async () => {
-      const hasShared = localStorage.getItem("relift_has_shared_post") === "true";
+      const hasShared = storage.getString("relift_has_shared_post" as any, "") === "true";
       return hasShared;
     },
     getProgress: async () => {
-      const hasShared = localStorage.getItem("relift_has_shared_post") === "true";
+      const hasShared = storage.getString("relift_has_shared_post" as any, "") === "true";
       return hasShared ? 100 : 0;
     },
   },

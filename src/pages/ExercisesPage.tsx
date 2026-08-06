@@ -1,3 +1,4 @@
+import { storage } from "@/lib/storage";
 import { useEffect, useState, useDeferredValue, useRef, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
@@ -101,7 +102,7 @@ export default function ExercisesPage() {
   useEffect(() => {
     loadExercises();
     try {
-      const saved = localStorage.getItem("recentSearches");
+      const saved = storage.getString("recentSearches" as any, "");
       if (saved) setRecentSearches(JSON.parse(saved));
     } catch (e) {}
   }, [loadExercises]);
@@ -111,7 +112,7 @@ export default function ExercisesPage() {
     const nextSearches = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
     setRecentSearches(nextSearches);
     try {
-      localStorage.setItem("recentSearches", JSON.stringify(nextSearches));
+      storage.set("recentSearches" as any, JSON.stringify(nextSearches as any));
     } catch (e) {}
   };
 
