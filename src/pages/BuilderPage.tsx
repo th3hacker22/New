@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
 import {
   ArrowLeft,
   Search,
@@ -12,18 +12,18 @@ import {
   Dumbbell,
   Play,
   Edit2,
-} from "lucide-react";
-import { Drawer } from "vaul";
-import { Button } from "@/components/ui/Button";
-import { useExerciseStore } from "@/store/useExerciseStore";
-import { useRoutineStore } from "@/store/useRoutineStore";
-import { useAuthStore } from "@/store/useAuthStore";
-import { useWorkoutStore } from "@/store/useWorkoutStore";
-import { useToastStore } from "@/store/useToastStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import { db, type RoutineExercise, type Routine } from "@/db";
-import { uid } from "@/utils/id";
-import { cn } from "@/utils/cn";
+} from 'lucide-react';
+import { Drawer } from 'vaul';
+import { Button } from '@/components/ui/Button';
+import { useExerciseStore } from '@/store/useExerciseStore';
+import { useRoutineStore } from '@/store/useRoutineStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { useToastStore } from '@/store/useToastStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { workoutRepository, db, type RoutineExercise, type Routine } from '@/db';
+import { uid } from '@/utils/id';
+import { cn } from '@/utils/cn';
 import {
   DndContext,
   closestCenter,
@@ -32,16 +32,16 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import routineBuilderImg from "@/assets/images/routine_builder_illustration_new_1784774032646.jpg";
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import routineBuilderImg from '@/assets/images/routine_builder_illustration_new_1784774032646.jpg';
 
 // ── Sortable Item Component ──
 function SortableExerciseItem({
@@ -55,14 +55,9 @@ function SortableExerciseItem({
   onUpdate: (updates: Partial<RoutineExercise>) => void;
   onToggleSuperset: () => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: exercise.order });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: exercise.order,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -74,8 +69,8 @@ function SortableExerciseItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative rounded-[--radius-card] bg-bg-card p-4 shadow-sm border border-border/50",
-        isDragging && "opacity-50 z-50 ring-2 ring-primary",
+        'relative rounded-[--radius-card] bg-bg-card p-4 shadow-sm border border-border/50',
+        isDragging && 'opacity-50 z-50 ring-2 ring-primary',
       )}
     >
       <div className="flex items-start gap-3">
@@ -96,10 +91,10 @@ function SortableExerciseItem({
               <button
                 onClick={onToggleSuperset}
                 className={cn(
-                  "p-1.5 rounded-lg transition-colors border",
+                  'p-1.5 rounded-lg transition-colors border',
                   exercise.isSupersetWithNext
-                    ? "bg-warning/20 text-warning border-warning/50"
-                    : "bg-bg-elevated text-text-muted border-transparent hover:text-text-primary",
+                    ? 'bg-warning/20 text-warning border-warning/50'
+                    : 'bg-bg-elevated text-text-muted border-transparent hover:text-text-primary',
                 )}
                 title="Superset with next"
               >
@@ -123,9 +118,7 @@ function SortableExerciseItem({
                 type="number"
                 min="1"
                 value={exercise.targetSets}
-                onChange={(e) =>
-                  onUpdate({ targetSets: Number(e.target.value) || 1 })
-                }
+                onChange={(e) => onUpdate({ targetSets: Number(e.target.value) || 1 })}
                 className="w-full rounded-lg border border-border bg-bg-elevated px-2 py-1.5 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary text-center"
               />
             </div>
@@ -137,9 +130,7 @@ function SortableExerciseItem({
                 type="number"
                 min="1"
                 value={exercise.targetReps}
-                onChange={(e) =>
-                  onUpdate({ targetReps: Number(e.target.value) || 1 })
-                }
+                onChange={(e) => onUpdate({ targetReps: Number(e.target.value) || 1 })}
                 className="w-full rounded-lg border border-border bg-bg-elevated px-2 py-1.5 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary text-center"
               />
             </div>
@@ -152,9 +143,7 @@ function SortableExerciseItem({
                 min="0"
                 step="5"
                 value={exercise.restTimer}
-                onChange={(e) =>
-                  onUpdate({ restTimer: Number(e.target.value) || 0 })
-                }
+                onChange={(e) => onUpdate({ restTimer: Number(e.target.value) || 0 })}
                 className="w-full rounded-lg border border-border bg-bg-elevated px-2 py-1.5 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary text-center"
               />
             </div>
@@ -175,15 +164,13 @@ export default function BuilderPage() {
   const navigate = useNavigate();
   const { exercises, loadExercises } = useExerciseStore();
   const { language } = useSettingsStore();
-  const isAr = language === "ar";
+  const isAr = language === 'ar';
 
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
-  const [name, setName] = useState("");
-  const [routineExercises, setRoutineExercises] = useState<RoutineExercise[]>(
-    [],
-  );
+  const [name, setName] = useState('');
+  const [routineExercises, setRoutineExercises] = useState<RoutineExercise[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
 
   const saveRoutineState = useRoutineStore((s) => s.saveRoutine);
@@ -195,7 +182,7 @@ export default function BuilderPage() {
     loadExercises();
 
     const params = new URLSearchParams(window.location.search);
-    const editId = params.get("editRoutineId");
+    const editId = params.get('editRoutineId');
     if (editId) {
       db.routines.get(editId).then((r) => {
         if (r && !r.deleted) {
@@ -238,18 +225,12 @@ export default function BuilderPage() {
 
   const getSmartDefaults = async (exerciseId: string) => {
     try {
-      const sessions = await db.workoutSessions
-        .where("completed")
-        .equals(1)
-        .reverse()
-        .toArray();
+      const sessions = await workoutRepository.recentCompleted(100);
       let bestSets = 3;
       let bestReps = 10;
 
       for (const session of sessions) {
-        const ex = session.exercises.find(
-          (e) => String(e.exerciseId) === String(exerciseId),
-        );
+        const ex = session.exercises.find((e) => String(e.exerciseId) === String(exerciseId));
         if (ex && ex.sets.length > 0) {
           bestSets = ex.sets.length;
           bestReps = Math.max(...ex.sets.map((s) => s.reps));
@@ -278,14 +259,12 @@ export default function BuilderPage() {
 
     setRoutineExercises([...routineExercises, newItem]);
     setIsSearchOpen(false);
-    setSearchQuery("");
+    setSearchQuery('');
   };
 
   const updateExercise = (order: number, updates: Partial<RoutineExercise>) => {
     setRoutineExercises((items) =>
-      items.map((item) =>
-        item.order === order ? { ...item, ...updates } : item,
-      ),
+      items.map((item) => (item.order === order ? { ...item, ...updates } : item)),
     );
   };
 
@@ -296,8 +275,7 @@ export default function BuilderPage() {
       newItems = newItems.map((item, idx) => ({
         ...item,
         order: idx,
-        isSupersetWithNext:
-          idx === newItems.length - 1 ? false : item.isSupersetWithNext,
+        isSupersetWithNext: idx === newItems.length - 1 ? false : item.isSupersetWithNext,
       }));
       return newItems;
     });
@@ -308,19 +286,17 @@ export default function BuilderPage() {
       useToastStore
         .getState()
         .addToast(
-          "error",
+          'error',
           isAr
-            ? "يرجى كتابة اسم للجدول وإضافة تمرينة واحدة على الأقل."
-            : "Please provide a name and at least one exercise.",
+            ? 'يرجى كتابة اسم للجدول وإضافة تمرينة واحدة على الأقل.'
+            : 'Please provide a name and at least one exercise.',
         );
       return;
     }
 
     try {
       const routineId = editingRoutine ? editingRoutine.id : uid();
-      const createdAt = editingRoutine
-        ? editingRoutine.createdAt
-        : new Date().toISOString();
+      const createdAt = editingRoutine ? editingRoutine.createdAt : new Date().toISOString();
 
       await saveRoutineState(
         {
@@ -335,24 +311,21 @@ export default function BuilderPage() {
       useToastStore
         .getState()
         .addToast(
-          "success",
+          'success',
           editingRoutine
             ? isAr
-              ? "تم تحديث الجدول بنجاح! 📋"
-              : "Routine updated successfully!"
+              ? 'تم تحديث الجدول بنجاح! 📋'
+              : 'Routine updated successfully!'
             : isAr
-              ? "تم حفظ الجدول بنجاح! 📋"
-              : "Routine saved successfully!",
+              ? 'تم حفظ الجدول بنجاح! 📋'
+              : 'Routine saved successfully!',
         );
-      navigate({ to: "/" });
+      navigate({ to: '/' });
     } catch (e) {
       console.error(e);
       useToastStore
         .getState()
-        .addToast(
-          "error",
-          isAr ? "حدث خطأ أثناء حفظ الجدول." : "Failed to save routine.",
-        );
+        .addToast('error', isAr ? 'حدث خطأ أثناء حفظ الجدول.' : 'Failed to save routine.');
     }
   };
 
@@ -368,11 +341,8 @@ export default function BuilderPage() {
       await deleteRoutineState(editingRoutine.id, user?.uid);
       useToastStore
         .getState()
-        .addToast(
-          "success",
-          isAr ? "تم حذف الجدول بنجاح 📋" : "Routine deleted",
-        );
-      navigate({ to: "/" });
+        .addToast('success', isAr ? 'تم حذف الجدول بنجاح 📋' : 'Routine deleted');
+      navigate({ to: '/' });
     }
   };
 
@@ -383,10 +353,7 @@ export default function BuilderPage() {
     navigate({ to: `/workout/$sessionId`, params: { sessionId } });
   };
 
-  const totalSets = routineExercises.reduce(
-    (acc, curr) => acc + curr.targetSets,
-    0,
-  );
+  const totalSets = routineExercises.reduce((acc, curr) => acc + curr.targetSets, 0);
 
   const filteredExercises = exercises.filter((ex) =>
     ex.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -404,25 +371,25 @@ export default function BuilderPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-bg-surface/90 via-bg-surface/60 to-transparent flex flex-col justify-center p-5">
           <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/20 border border-primary/30 px-2.5 py-0.5 rounded-md self-start mb-1 backdrop-blur-md">
-            {isAr ? "مصمم التمارين الذكي 3D" : "3D ROUTINE BLUEPRINT"}
+            {isAr ? 'مصمم التمارين الذكي 3D' : '3D ROUTINE BLUEPRINT'}
           </span>
           <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-text-primary">
             {editingRoutine
               ? isAr
-                ? "تعديل جدول التمارين"
-                : "Edit Routine"
+                ? 'تعديل جدول التمارين'
+                : 'Edit Routine'
               : isAr
-                ? "تصميم جدول تمارين احترافي"
-                : "Build Custom Routine"}
+                ? 'تصميم جدول تمارين احترافي'
+                : 'Build Custom Routine'}
           </h1>
           <p className="text-xs text-text-muted font-bold mt-0.5 max-w-md">
             {editingRoutine
               ? isAr
-                ? "عدّل التمارين والجولات وترتيب التدريب"
-                : "Modify exercises, target sets, and sequence"
+                ? 'عدّل التمارين والجولات وترتيب التدريب'
+                : 'Modify exercises, target sets, and sequence'
               : isAr
-                ? "اختر التمارين ورتب مجموعتك المخصصة لبدء التمرين"
-                : "Select exercises, set targets, and build your training template"}
+                ? 'اختر التمارين ورتب مجموعتك المخصصة لبدء التمرين'
+                : 'Select exercises, set targets, and build your training template'}
           </p>
         </div>
       </div>
@@ -440,20 +407,20 @@ export default function BuilderPage() {
             <h1 className="text-xl font-bold text-text-primary uppercase tracking-wider">
               {editingRoutine
                 ? isAr
-                  ? "تعديل الجدول ✏️"
-                  : "Edit Routine"
+                  ? 'تعديل الجدول ✏️'
+                  : 'Edit Routine'
                 : isAr
-                  ? "تصميم جدول جديد 📋"
-                  : "Custom Routine"}
+                  ? 'تصميم جدول جديد 📋'
+                  : 'Custom Routine'}
             </h1>
             <p className="text-sm text-text-secondary">
               {editingRoutine
                 ? isAr
-                  ? "عدّل التمارين والجولات والراحات"
-                  : "Modify exercises and targets"
+                  ? 'عدّل التمارين والجولات والراحات'
+                  : 'Modify exercises and targets'
                 : isAr
-                  ? "ابني فورمتك بالتفصيل"
-                  : "Build your perfect workout"}
+                  ? 'ابني فورمتك بالتفصيل'
+                  : 'Build your perfect workout'}
             </p>
           </div>
         </div>
@@ -465,7 +432,7 @@ export default function BuilderPage() {
             className="px-3 py-2 rounded-xl bg-danger/10 text-danger hover:bg-danger/20 transition-colors text-xs font-bold uppercase tracking-wider"
             icon={<Trash2 className="h-4 w-4" />}
           >
-            {isAr ? "حذف" : "Delete"}
+            {isAr ? 'حذف' : 'Delete'}
           </Button>
         )}
       </div>
@@ -473,13 +440,13 @@ export default function BuilderPage() {
       {/* Routine Name */}
       <div className="glass-card p-4 rounded-[--radius-card]">
         <label className="text-[10px] font-bold text-text-primary uppercase tracking-wider block mb-2">
-          {isAr ? "اسم الجدول" : "Routine Name"}
+          {isAr ? 'اسم الجدول' : 'Routine Name'}
         </label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={isAr ? "مثال: يوم الدفع / Push Day" : "e.g., Push Day Alpha"}
+          placeholder={isAr ? 'مثال: يوم الدفع / Push Day' : 'e.g., Push Day Alpha'}
           className="w-full rounded-xl border border-border bg-bg-elevated px-4 py-3 text-sm font-semibold text-text-primary outline-none focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
@@ -487,32 +454,21 @@ export default function BuilderPage() {
       {/* Stats Summary */}
       <div className="flex gap-4 p-4 glass-card rounded-[--radius-card] bg-primary/5">
         <div className="flex-1">
-          <p className="text-[10px] uppercase font-bold text-primary mb-1">
-            Total Exercises
-          </p>
+          <p className="text-[10px] uppercase font-bold text-primary mb-1">Total Exercises</p>
           <p className="text-xl font-bold tabular-nums text-text-primary">
             {routineExercises.length}
           </p>
         </div>
         <div className="w-px bg-border/50" />
         <div className="flex-1">
-          <p className="text-[10px] uppercase font-bold text-primary mb-1">
-            Total Sets
-          </p>
-          <p className="text-xl font-bold tabular-nums text-text-primary">
-            {totalSets}
-          </p>
+          <p className="text-[10px] uppercase font-bold text-primary mb-1">Total Sets</p>
+          <p className="text-xl font-bold tabular-nums text-text-primary">{totalSets}</p>
         </div>
         <div className="w-px bg-border/50" />
         <div className="flex-1">
-          <p className="text-[10px] uppercase font-bold text-primary mb-1">
-            Est. Reps
-          </p>
+          <p className="text-[10px] uppercase font-bold text-primary mb-1">Est. Reps</p>
           <p className="text-xl font-bold tabular-nums text-text-primary">
-            {routineExercises.reduce(
-              (acc, curr) => acc + curr.targetSets * curr.targetReps,
-              0,
-            )}
+            {routineExercises.reduce((acc, curr) => acc + curr.targetSets * curr.targetReps, 0)}
           </p>
         </div>
       </div>
@@ -579,9 +535,7 @@ export default function BuilderPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm truncate">{ex.name}</p>
-                        <p className="text-xs text-text-muted capitalize">
-                          {ex.equipment}
-                        </p>
+                        <p className="text-xs text-text-muted capitalize">{ex.equipment}</p>
                       </div>
                       <Plus className="h-5 w-5 text-primary shrink-0" />
                     </button>
@@ -595,9 +549,7 @@ export default function BuilderPage() {
         {routineExercises.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 border border-dashed border-border rounded-[--radius-card] bg-bg-elevated/30">
             <Dumbbell className="h-10 w-10 text-text-muted/30 mb-3" />
-            <p className="text-sm text-text-secondary">
-              No exercises added yet.
-            </p>
+            <p className="text-sm text-text-secondary">No exercises added yet.</p>
           </div>
         ) : (
           <DndContext
@@ -616,14 +568,11 @@ export default function BuilderPage() {
                     key={exercise.order}
                     exercise={exercise}
                     onRemove={() => removeExercise(exercise.order)}
-                    onUpdate={(updates) =>
-                      updateExercise(exercise.order, updates)
-                    }
+                    onUpdate={(updates) => updateExercise(exercise.order, updates)}
                     onToggleSuperset={() =>
                       updateExercise(exercise.order, {
                         isSupersetWithNext:
-                          index !== routineExercises.length - 1 &&
-                          !exercise.isSupersetWithNext,
+                          index !== routineExercises.length - 1 && !exercise.isSupersetWithNext,
                       })
                     }
                   />
@@ -634,10 +583,7 @@ export default function BuilderPage() {
               {activeDragId !== null ? (
                 <div className="rounded-[--radius-card] bg-bg-card p-4 shadow-xl border border-primary/50 opacity-90 ring-2 ring-primary">
                   <p className="font-bold text-sm">
-                    {
-                      routineExercises.find((ex) => ex.order === activeDragId)
-                        ?.exerciseName
-                    }
+                    {routineExercises.find((ex) => ex.order === activeDragId)?.exerciseName}
                   </p>
                 </div>
               ) : null}
@@ -659,11 +605,11 @@ export default function BuilderPage() {
           >
             {editingRoutine
               ? isAr
-                ? "تحديث الجدول"
-                : "Update Routine"
+                ? 'تحديث الجدول'
+                : 'Update Routine'
               : isAr
-                ? "حفظ الجدول"
-                : "Save Routine"}
+                ? 'حفظ الجدول'
+                : 'Save Routine'}
           </Button>
           <Button
             onClick={handeStartSession}
@@ -671,7 +617,7 @@ export default function BuilderPage() {
             size="sm"
             className="flex-1 bg-text-primary text-[#050505] hover:opacity-90 h-10 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md"
           >
-            <Play className="h-4 w-4 fill-current" /> {isAr ? "ابدأ التمرين" : "Start"}
+            <Play className="h-4 w-4 fill-current" /> {isAr ? 'ابدأ التمرين' : 'Start'}
           </Button>
         </div>
       </div>

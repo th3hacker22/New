@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, TrendingUp, Dumbbell, Clock, Activity, Heart } from 'lucide-react';
-import { getWorkoutStreak, getTotalStats, db } from '@/db';
+import { getWorkoutStreak, getTotalStats, workoutRepository } from '@/db';
 import { useRoutineStore } from '@/store/useRoutineStore';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -85,21 +85,11 @@ export default function HomePage() {
   useEffect(() => {
     if (exercises.length === 0) return;
     async function loadData() {
-      const now = new Date();
-      const dayOfWeek = (now.getDay() + 6) % 7;
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - dayOfWeek);
-      startOfWeek.setHours(0, 0, 0, 0);
-
       const [streakData, statsData, sessions, thisWeekSessions] = await Promise.all([
         getWorkoutStreak(),
         getTotalStats(),
-        db.workoutSessions.orderBy('date').reverse().limit(3).toArray(),
-        db.workoutSessions
-          .where('completed')
-          .equals(1)
-          .filter((s) => new Date(s.date) >= startOfWeek)
-          .toArray(),
+        workoutRepository.recentCompleted(3),
+        workoutRepository.completedThisWeek(),
       ]);
 
       const activeDays = Array(7).fill(false);

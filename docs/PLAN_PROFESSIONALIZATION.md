@@ -48,14 +48,15 @@
 - [ ] ملف `.nvmrc` و `CONTRIBUTING.md`
 - **القبول**: `npm run lint && npm run typecheck && npm run test && npm run build` كلها خضراء محلياً وفي CI
 
-### Phase 1 — تعميق الـ Modules (Architecture)
+### Phase 1 — تعميق الـ Modules (Architecture) — **جزئياً مكتمل ✅**
 بالاسترشاد بـ `improve-codebase-architecture`:
-- [ ] فصل `server.ts` إلى وحدات عميقة: `server/routes/`, `server/validators/`, `server/ai/` (seam: كل route له واجهة واحدة، الـ AI client adapter قابل للاستبدال)
-- [ ] إنشاء `src/db/repositories/` — workout repository يخفي تفاصيل Dexie (حل Message Chains الـ 12 مرة)
-- [ ] استخراج `src/domain/` — الأنواع النقية (WorkoutSet, BodyMetrics, SetType) + حسابات volume/streak/1RM (حل Data Clumps + Primitive Obsession)
-- [ ] تقسيم SettingsPage: مجموعات إعدادات (units, timer, integrations, appearance) كمكونات منفصلة
+- [x] فصل `server.ts` إلى وحدات عميقة: `server/routes/`, `server/validation/`, `server/ai/`, `server/middleware/` — server.ts بقى ملف توصيل رفيع (seam: الـ AI adapter قابل للاستبدال)
+- [x] إنشاء `src/db/repositories/workoutRepository.ts` — يخفي تفاصيل Dexie (كل استعلامات `where('completed').equals(1)` الـ 12 اتحولت لاستدعاءات مقصودة المعنى)
+- [x] استخراج `src/domain/` — الأنواع النقية + حسابات volume/streak/1RM/analytics (25 اختبار)
+- [ ] تقسيم SettingsPage (1635 سطر) وFeedPage (1508) وNutritionPage (1115) لمكونات
+- [ ] إنشاء repositories للجداول التانية (routines, nutrition, bodyMeasurements)
 - [ ] إزالة `as any` من i18n (type-safe keys)
-- **القبول**: كل ملف صفحة < 400 سطر، لا `as any` في `src/domain/`
+- **القبول**: كل ملف صفحة < 400 سطر، لا `as any` في `src/domain/` (محقّق للـ domain)
 
 ### Phase 2 — الاختبارات (Testing)
 - [ ] Unit: domain calculations (volume, streak, getWeekKey, 1RM)

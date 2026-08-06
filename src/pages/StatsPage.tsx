@@ -15,6 +15,7 @@ import {
   getMuscleGroupStats,
   getWorkoutDensity,
   getWeeklySetVolume,
+  workoutRepository,
   db,
   type BodyMeasurement,
   type ProgressPhoto,
@@ -230,7 +231,7 @@ export default function StatsPage() {
         getMuscleGroupStats(exercises),
         getWorkoutDensity(),
         getWeeklySetVolume(exercises),
-        db.workoutSessions.where('completed').equals(1).toArray(),
+        workoutRepository.completedSessions(),
       ]);
 
       setStreak(streakData);
