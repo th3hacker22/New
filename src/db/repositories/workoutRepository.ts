@@ -37,21 +37,26 @@ import {
 const COMPLETED_INDEX = 1;
 
 export const workoutRepository = {
-  /** All completed sessions (the common read path for analytics). */
-  completedSessions(): Promise<WorkoutSession[]> {
-    return db.workoutSessions
-      .where('completed')
-      .equals(COMPLETED_INDEX)
-      .toArray() as unknown as Promise<WorkoutSession[]>;
+  /**
+   * All completed sessions ordered by date (newest first). We sort in JS,
+   * not by primary key, because rows can be inserted out of date order
+   * (imports/backdated edits).
+   */
+  async completedSessions(): Promise<WorkoutSession[]> {
+    return this.allCompletedOrdered();
   },
 
   /** All completed sessions, newest first. */
-  completedSessionsDescending(): Promise<WorkoutSession[]> {
-    return db.workoutSessions
+  async completedSessionsDescending(): Promise<WorkoutSession[]> {
+    return this.allCompletedOrdered();
+  },
+
+  async allCompletedOrdered(): Promise<WorkoutSession[]> {
+    const rows = (await db.workoutSessions
       .where('completed')
       .equals(COMPLETED_INDEX)
-      .reverse()
-      .toArray() as unknown as Promise<WorkoutSession[]>;
+      .toArray()) as unknown as WorkoutSession[];
+    return rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   },
 
   /** Delete a session by id. */
@@ -79,26 +84,18 @@ export const workoutRepository = {
 
   /** Most recent completed sessions, newest first. */
   async recentCompleted(limit: number): Promise<WorkoutSession[]> {
-    return db.workoutSessions
-      .where('completed')
-      .equals(COMPLETED_INDEX)
-      .reverse()
-      .limit(limit)
-      .toArray() as unknown as Promise<WorkoutSession[]>;
+    return (await this.allCompletedOrdered()).slice(0, limit);
   },
 
-  /**
-   * Completed sessions since `since` (defaults to start of the current week,
-   * Monday 00:00 local — matching the app's week convention).
-   */
+  /** Completed sessions since `since`, newest first. */
   async completedSince(since: Date): Promise<WorkoutSession[]> {
-    return (await this.completedSessions()).filter((s) => new Date(s.date) >= since);
+    return (await this.allCompletedOrdered()).filter((s) => new Date(s.date) >= since);
   },
 
   /** Completed sessions in the current week (Monday 00:00 local). */
   completedThisWeek(now = new Date()): Promise<WorkoutSession[]> {
     const startOfWeek = new Date(now);
-    const dayOfWeek = (now.getDay() + 6) % 7; // Monday-based
+    const dayOfWeek = (now.getDay() + 6) % 7;
     startOfWeek.setDate(now.getDate() - dayOfWeek);
     startOfWeek.setHours(0, 0, 0, 0);
     return this.completedSince(startOfWeek);
