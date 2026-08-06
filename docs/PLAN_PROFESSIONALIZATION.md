@@ -53,7 +53,7 @@
 - [x] فصل `server.ts` إلى وحدات عميقة: `server/routes/`, `server/validation/`, `server/ai/`, `server/middleware/` — server.ts بقى ملف توصيل رفيع (seam: الـ AI adapter قابل للاستبدال)
 - [x] إنشاء `src/db/repositories/workoutRepository.ts` — يخفي تفاصيل Dexie (كل استعلامات `where('completed').equals(1)` الـ 12 اتحولت لاستدعاءات مقصودة المعنى)
 - [x] استخراج `src/domain/` — الأنواع النقية + حسابات volume/streak/1RM/analytics (25 اختبار)
-- [ ] تقسيم SettingsPage (1635 سطر) وFeedPage (1508) وNutritionPage (1115) لمكونات
+- [x] تقسيم SettingsPage (1635→353 سطر)، FeedPage (1508→429)، NutritionPage (1115→203) لمكونات في `components/{settings,feed,nutrition}/`
 - [ ] إنشاء repositories للجداول التانية (routines, nutrition, bodyMeasurements)
 - [ ] إزالة `as any` من i18n (type-safe keys)
 - **القبول**: كل ملف صفحة < 400 سطر، لا `as any` في `src/domain/` (محقّق للـ domain)
