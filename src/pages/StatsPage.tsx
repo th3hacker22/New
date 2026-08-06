@@ -16,7 +16,7 @@ import {
   getWorkoutDensity,
   getWeeklySetVolume,
   workoutRepository,
-  db,
+  bodyRepository,
   type BodyMeasurement,
   type ProgressPhoto,
 } from '@/db';
@@ -353,8 +353,8 @@ export default function StatsPage() {
       return;
     }
     const [mData, pData] = await Promise.all([
-      db.bodyMeasurements.orderBy('date').reverse().toArray(),
-      db.progressPhotos.orderBy('date').reverse().toArray(),
+      bodyRepository.listMeasurements(),
+      bodyRepository.listPhotos(),
     ]);
     setMeasurements(mData);
     const withUrls = pData.map((p) => ({ ...p, url: URL.createObjectURL(p.imageBlob) }));
@@ -366,7 +366,7 @@ export default function StatsPage() {
   }
 
   async function handleAddMeasurement(m: BodyMeasurement) {
-    await db.bodyMeasurements.add(m);
+    await bodyRepository.addMeasurement(m);
     loadMeasurementsAndPhotos();
   }
 
@@ -381,13 +381,13 @@ export default function StatsPage() {
       imageBlob: file,
       createdAt: new Date().toISOString(),
     };
-    await db.progressPhotos.add(photo);
+    await bodyRepository.addPhoto(photo);
     loadMeasurementsAndPhotos();
   }
 
   async function deletePhoto(id: string) {
     if (!confirm(tI18n('stats.delete_photo_confirm'))) return;
-    await db.progressPhotos.delete(id);
+    await bodyRepository.removePhoto(id);
     loadMeasurementsAndPhotos();
   }
 

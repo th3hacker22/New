@@ -5,7 +5,7 @@ import {
   getWeeklyTonnage,
   getPersonalRecords,
   workoutRepository,
-  db,
+  nutritionRepository,
 } from '@/db';
 
 export interface AchievementDef {
@@ -418,11 +418,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     xp: 200,
     iconName: 'Utensils',
     checkCriteria: async () => {
-      const count = await db.foodEntries.count();
+      const count = await nutritionRepository.count();
       return count >= 5;
     },
     getProgress: async () => {
-      const count = await db.foodEntries.count();
+      const count = await nutritionRepository.count();
       return Math.min(100, (count / 5) * 100);
     },
   },

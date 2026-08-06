@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Plus, PlusCircle, ArrowRightLeft } from 'lucide-react';
 import { useNutritionStore } from '@/store/useNutritionStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useTranslation } from '@/i18n';
+import { useTranslation, type TranslationKey } from '@/i18n';
 import { storage } from '@/lib/storage';
 import { MealScanner } from '@/components/nutrition/MealScanner';
 import HealthySwapsHelper from '@/components/extras/HealthySwapsHelper';
@@ -30,7 +30,7 @@ interface AiResult {
 export default function NutritionPage() {
   const { t, isAr } = useTranslation();
   const labels = new Proxy({} as Record<string, string>, {
-    get: (_, prop: string) => t(`nutrition.${prop}`),
+    get: (_, prop: string) => t(`nutrition.${prop}` as TranslationKey),
   });
 
   const [currentDate, setCurrentDate] = useState(new Date());

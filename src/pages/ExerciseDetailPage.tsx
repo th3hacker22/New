@@ -1,8 +1,8 @@
-import { storage } from "@/lib/storage";
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/Button";
+import { storage } from '@/lib/storage';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from '@tanstack/react-router';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/Button';
 import {
   ArrowLeft,
   ChevronRight,
@@ -16,16 +16,16 @@ import {
   Youtube,
   Heart,
   TrendingUp,
-} from "lucide-react";
-import { useWorkoutStore } from "@/store/useWorkoutStore";
-import { useExerciseStore } from "@/store/useExerciseStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
+} from 'lucide-react';
+import { useWorkoutStore } from '@/store/useWorkoutStore';
+import { useExerciseStore } from '@/store/useExerciseStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import {
   getExerciseName,
   getExerciseBodyPart,
   getExerciseEquipment,
   getExerciseTarget,
-} from "@/types/exercise";
+} from '@/types/exercise';
 import {
   LineChart,
   Line,
@@ -35,19 +35,19 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-} from "recharts";
-import { getAlternativeExercises } from "@/services/exerciseService";
-import { db, getExerciseHistory } from "@/db";
-import { SkeletonCard } from "@/components/ui/Skeleton";
-import { getMuscleIdsForExercise } from "@/utils/muscleMapper";
-import AnatomyMap from "@/components/AnatomyMap";
-import { cn } from "@/utils/cn";
+} from 'recharts';
+import { getAlternativeExercises } from '@/services/exerciseService';
+import { exerciseCatalogRepository, getExerciseHistory } from '@/db';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { getMuscleIdsForExercise } from '@/utils/muscleMapper';
+import AnatomyMap from '@/components/AnatomyMap';
+import { cn } from '@/utils/cn';
 
 export default function ExerciseDetailPage() {
-  const { exerciseId } = useParams({ from: "/exercises/$exerciseId" });
+  const { exerciseId } = useParams({ from: '/exercises/$exerciseId' });
   const navigate = useNavigate();
   const { language } = useSettingsStore();
-  const isAr = language === "ar";
+  const isAr = language === 'ar';
   const startWorkout = useWorkoutStore((s) => s.startWorkout);
   const { exercises, loadExercises, isLoading } = useExerciseStore();
   const [showGif, setShowGif] = useState(false);
@@ -55,7 +55,7 @@ export default function ExerciseDetailPage() {
 
   useEffect(() => {
     const checkFavorite = async () => {
-      const fav = await db.favoriteExercises.get(exerciseId);
+      const fav = await exerciseCatalogRepository.isFavorite(exerciseId);
       setIsFavorite(!!fav);
     };
     checkFavorite();
@@ -63,9 +63,9 @@ export default function ExerciseDetailPage() {
 
   const toggleFavorite = async () => {
     if (isFavorite) {
-      await db.favoriteExercises.delete(exerciseId);
+      await exerciseCatalogRepository.removeFavorite(exerciseId);
     } else {
-      await db.favoriteExercises.put({ id: exerciseId });
+      await exerciseCatalogRepository.addFavorite(exerciseId);
     }
     setIsFavorite(!isFavorite);
   };
@@ -83,17 +83,17 @@ export default function ExerciseDetailPage() {
         await navigator.share(shareData);
       } catch (err: any) {
         // Don't log if the user simply canceled the share
-        if (err.name !== "AbortError") {
-          console.error("Error sharing:", err);
+        if (err.name !== 'AbortError') {
+          console.error('Error sharing:', err);
         }
       }
     } else {
       // Fallback: Copy to clipboard
       try {
         await navigator.clipboard.writeText(window.location.href);
-        alert(isAr ? "تم نسخ الرابط!" : "Link copied to clipboard!");
+        alert(isAr ? 'تم نسخ الرابط!' : 'Link copied to clipboard!');
       } catch (err) {
-        console.error("Failed to copy:", err);
+        console.error('Failed to copy:', err);
       }
     }
   };
@@ -101,11 +101,11 @@ export default function ExerciseDetailPage() {
   const handleYoutubeSearch = () => {
     if (!exercise) return;
     const query = encodeURIComponent(`${exercise.name} exercise tutorial`);
-    window.open(`https://www.youtube.com/results?search_query=${query}`, "_blank");
+    window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
   };
 
   const [pinnedNote, setPinnedNote] = useState<string>(() => {
-    return storage.getString(`pulse_pinned_note_${exerciseId}` as any, "") || "";
+    return storage.getString(`pulse_pinned_note_${exerciseId}` as any, '') || '';
   });
   const [historyData, setHistoryData] = useState<any[]>([]);
 
@@ -131,9 +131,7 @@ export default function ExerciseDetailPage() {
   }, [loadExercises]);
 
   const exercise = exercises.find((e) => e.id === exerciseId);
-  const alternatives = exercise
-    ? getAlternativeExercises(exercises, exerciseId, 3)
-    : [];
+  const alternatives = exercise ? getAlternativeExercises(exercises, exerciseId, 3) : [];
 
   // ── Loading State ──
   if (isLoading) {
@@ -157,9 +155,7 @@ export default function ExerciseDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <Dumbbell className="h-16 w-16 text-text-muted" />
-        <p className="text-lg font-bold text-text-primary">
-          Exercise Not Found
-        </p>
+        <p className="text-lg font-bold text-text-primary">Exercise Not Found</p>
         <Link
           to="/exercises"
           className="flex items-center gap-2 text-sm text-primary hover:text-primary-hover"
@@ -174,7 +170,7 @@ export default function ExerciseDetailPage() {
   // ── Handle Start Workout ──
   const handleStartWorkout = async () => {
     const sessionId = await startWorkout([exercise.id]);
-    navigate({ to: "/workout/$sessionId", params: { sessionId } });
+    navigate({ to: '/workout/$sessionId', params: { sessionId } });
   };
 
   return (
@@ -202,7 +198,7 @@ export default function ExerciseDetailPage() {
             alt={exercise.name}
             className="image-overlay h-full w-full object-contain"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
+              (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
 
@@ -258,13 +254,13 @@ export default function ExerciseDetailPage() {
             <button
               onClick={toggleFavorite}
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-xl border transition-all active:scale-90",
+                'flex h-10 w-10 items-center justify-center rounded-xl border transition-all active:scale-90',
                 isFavorite
-                  ? "bg-danger/10 border-danger/20 text-danger"
-                  : "bg-bg-surface border-border text-text-muted hover:text-text-primary"
+                  ? 'bg-danger/10 border-danger/20 text-danger'
+                  : 'bg-bg-surface border-border text-text-muted hover:text-text-primary',
               )}
             >
-              <Heart className={cn("h-5 w-5", isFavorite && "fill-current")} />
+              <Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} />
             </button>
             <button
               onClick={handleShare}
@@ -281,7 +277,7 @@ export default function ExerciseDetailPage() {
           className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-danger/10 border border-danger/20 text-danger text-xs font-black uppercase tracking-widest transition-all hover:bg-danger/20 active:scale-[0.98]"
         >
           <Youtube className="h-4 w-4" />
-          {isAr ? "شاهد على يوتيوب" : "Watch on YouTube"}
+          {isAr ? 'شاهد على يوتيوب' : 'Watch on YouTube'}
         </button>
       </motion.div>
 
@@ -363,7 +359,9 @@ export default function ExerciseDetailPage() {
           </p>
         ) : (
           <div className="text-center py-4 bg-bg-surface-hover/10 border border-dashed border-border rounded-xl">
-            <p className="text-xs text-text-muted uppercase tracking-wider mb-2">No pinned notes yet</p>
+            <p className="text-xs text-text-muted uppercase tracking-wider mb-2">
+              No pinned notes yet
+            </p>
             <button
               onClick={() => setIsEditingNote(true)}
               className="text-xs font-black uppercase text-primary hover:underline"
@@ -418,9 +416,12 @@ export default function ExerciseDetailPage() {
           <div className="w-full max-w-sm mt-4 p-4 rounded-xl bg-bg-elevated/50">
             <AnatomyMap
               readOnly
-              highlightedMuscles={getMuscleIdsForExercise(exercise.targetEn || exercise.target || "", [])}
+              highlightedMuscles={getMuscleIdsForExercise(
+                exercise.targetEn || exercise.target || '',
+                [],
+              )}
               secondaryHighlightedMuscles={getMuscleIdsForExercise(
-                "",
+                '',
                 exercise.secondaryMusclesEn || exercise.secondaryMuscles || [],
               )}
             />
@@ -451,9 +452,7 @@ export default function ExerciseDetailPage() {
               <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary border border-primary/20">
                 {index + 1}
               </div>
-              <p className="text-sm leading-relaxed text-text-secondary pt-0.5">
-                {step}
-              </p>
+              <p className="text-sm leading-relaxed text-text-secondary pt-0.5">{step}</p>
             </motion.div>
           ))}
         </div>
@@ -470,7 +469,7 @@ export default function ExerciseDetailPage() {
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-base font-bold text-text-primary uppercase tracking-wider">
               <TrendingUp className="h-5 w-5 text-primary" />
-              {isAr ? "تحليل التقدم" : "Progress Analytics"}
+              {isAr ? 'تحليل التقدم' : 'Progress Analytics'}
             </h2>
           </div>
           <div className="glass-card rounded-[--radius-card] p-5 border border-primary/10">
@@ -479,19 +478,19 @@ export default function ExerciseDetailPage() {
                 <AreaChart data={historyData}>
                   <defs>
                     <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#CCFF00" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#CCFF00" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#CCFF00" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#CCFF00" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <Tooltip
-                    contentStyle={{ 
-                      backgroundColor: "#111", 
-                      border: "1px solid #333", 
-                      borderRadius: "12px",
-                      fontSize: "10px"
+                    contentStyle={{
+                      backgroundColor: '#111',
+                      border: '1px solid #333',
+                      borderRadius: '12px',
+                      fontSize: '10px',
                     }}
-                    labelStyle={{ color: "#888", marginBottom: "4px" }}
-                    itemStyle={{ color: "#CCFF00", fontWeight: "bold" }}
+                    labelStyle={{ color: '#888', marginBottom: '4px' }}
+                    itemStyle={{ color: '#CCFF00', fontWeight: 'bold' }}
                     labelFormatter={(label) => new Date(label).toLocaleDateString()}
                   />
                   <Area
@@ -509,18 +508,20 @@ export default function ExerciseDetailPage() {
             <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
               <div>
                 <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">
-                  {isAr ? "أقصى وزن" : "Max Weight"}
+                  {isAr ? 'أقصى وزن' : 'Max Weight'}
                 </p>
                 <p className="text-lg font-black text-text-primary">
-                  {Math.max(...historyData.map(d => d.maxWeight))} <span className="text-[10px] opacity-50">kg</span>
+                  {Math.max(...historyData.map((d) => d.maxWeight))}{' '}
+                  <span className="text-[10px] opacity-50">kg</span>
                 </p>
               </div>
               <div>
                 <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">
-                  {isAr ? "إجمالي الحجم" : "Total Volume"}
+                  {isAr ? 'إجمالي الحجم' : 'Total Volume'}
                 </p>
                 <p className="text-lg font-black text-primary">
-                  {historyData[historyData.length-1].volume.toLocaleString()} <span className="text-[10px] opacity-50">kg</span>
+                  {historyData[historyData.length - 1].volume.toLocaleString()}{' '}
+                  <span className="text-[10px] opacity-50">kg</span>
                 </p>
               </div>
             </div>

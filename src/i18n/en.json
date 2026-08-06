@@ -149,7 +149,8 @@
     "photoHistory": "Photo History",
     "need2Photos": "Upload 2 Photos to Compare",
     "need2PhotosDesc": "Please upload at least 2 progress photos to use the interactive before/after slider comparison.",
-    "upload": "Upload Photo"
+    "upload": "Upload Photo",
+    "delete_photo_confirm": "Are you sure you want to delete this photo?"
   },
   "workout": {
     "inProgress": "Workout in Progress",

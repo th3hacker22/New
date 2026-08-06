@@ -14,7 +14,7 @@ import {
   UserPlus,
   UserMinus,
 } from 'lucide-react';
-import { getWorkoutStreak, getTotalStats, workoutRepository, db } from '@/db';
+import { getWorkoutStreak, getTotalStats, workoutRepository, bodyRepository } from '@/db';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSocialStore } from '@/store/useSocialStore';
@@ -94,7 +94,7 @@ export default function ProfilePage() {
       const [streakData, statsData, measurements] = await Promise.all([
         getWorkoutStreak(),
         getTotalStats(),
-        db.bodyMeasurements.orderBy('date').reverse().first(),
+        bodyRepository.latestMeasurement(),
       ]);
 
       setStreak(streakData);

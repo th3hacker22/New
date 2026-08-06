@@ -21,7 +21,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useWorkoutStore } from '@/store/useWorkoutStore';
 import { useToastStore } from '@/store/useToastStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { workoutRepository, db, type RoutineExercise, type Routine } from '@/db';
+import { workoutRepository, routineRepository, type RoutineExercise, type Routine } from '@/db';
 import { uid } from '@/utils/id';
 import { cn } from '@/utils/cn';
 import {
@@ -184,7 +184,7 @@ export default function BuilderPage() {
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('editRoutineId');
     if (editId) {
-      db.routines.get(editId).then((r) => {
+      routineRepository.get(editId).then((r) => {
         if (r && !r.deleted) {
           setEditingRoutine(r);
           setName(r.name);

@@ -144,7 +144,18 @@ db.open().catch(async (err: { name?: string }) => {
 // Thin wrappers around the workout repository so existing imports keep working.
 // New code should import { workoutRepository } from '@/db/repositories'.
 import { workoutRepository } from './repositories/workoutRepository';
-export { workoutRepository };
+import { routineRepository } from './repositories/routineRepository';
+import { nutritionRepository } from './repositories/nutritionRepository';
+import { bodyRepository } from './repositories/bodyRepository';
+import { exerciseCatalogRepository } from './repositories/exerciseCatalogRepository';
+export {
+  workoutRepository,
+  routineRepository,
+  nutritionRepository,
+  bodyRepository,
+  exerciseCatalogRepository,
+};
+export type { NewFoodEntry } from './repositories/nutritionRepository';
 
 export const getWorkoutStreak = () => workoutRepository.getStreak();
 export const getTotalStats = () => workoutRepository.getTotalStats();

@@ -149,7 +149,8 @@
     "photoHistory": "سجل الصور",
     "need2Photos": "ارفع صورتين للمقارنة",
     "need2PhotosDesc": "يرجى رفع صورتين على الأقل لاستخدام المقارنة.",
-    "upload": "رفع الصور"
+    "upload": "رفع الصور",
+    "delete_photo_confirm": "متأكد إنك عايز تمسح الصورة دي؟"
   },
   "workout": {
     "inProgress": "تمرين قيد التقدم",

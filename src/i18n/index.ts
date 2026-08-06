@@ -1,39 +1,38 @@
-import { useMemo, useCallback } from "react";
-import { useSettingsStore } from "@/store/useSettingsStore";
-import en from "./en.json";
-import ar from "./ar.json";
-import eg from "./eg.json";
+import { useMemo, useCallback } from 'react';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import en from './en.json';
+import ar from './ar.json';
+import eg from './eg.json';
+import type { TranslationDict, TranslationKey } from './types';
 
-type Language = "en" | "ar" | "eg";
+type Language = 'en' | 'ar' | 'eg';
 
-const dictionaries: Record<Language, typeof en> = {
-  en,
-  ar: ar as any,
-  eg: eg as any,
+const dictionaries: Record<Language, TranslationDict> = {
+  en: en as TranslationDict,
+  ar: ar as TranslationDict,
+  eg: eg as TranslationDict,
 };
 
-// Map legacy "ar" to Egyptian colloquial for backward compatibility
-// Users currently see "ar" as Egyptian slang, so we keep that behavior
-// Future: add separate toggle for ar (fusha) vs eg (3ammeya)
+// Legacy "ar" maps to Egyptian colloquial; fusha and regional variants map to ar.
 function normalizeLang(lang: string): Language {
-  if (lang === "ar") return "eg"; // legacy compatibility: ar = Egyptian
-  if (lang === "eg" || lang === "ar-EG") return "eg";
-  if (lang === "ar-SA" || lang === "ar-EG" || lang === "ar-Fusha") return "ar";
-  if (lang === "en") return "en";
-  return "eg"; // default to Egyptian for this app's audience
+  if (lang === 'ar') return 'eg';
+  if (lang === 'eg' || lang === 'ar-EG') return 'eg';
+  if (lang === 'ar-SA' || lang === 'ar-Fusha') return 'ar';
+  if (lang === 'en') return 'en';
+  return 'eg';
 }
 
-function getNestedValue(obj: any, path: string): string | undefined {
-  const keys = path.split(".");
-  let current = obj;
+function getNestedValue(obj: TranslationDict, path: string): string | undefined {
+  const keys = path.split('.');
+  let current: string | TranslationDict | undefined = obj;
   for (const key of keys) {
-    if (current && typeof current === "object" && key in current) {
+    if (current && typeof current === 'object' && key in current) {
       current = current[key];
     } else {
       return undefined;
     }
   }
-  return typeof current === "string" ? current : undefined;
+  return typeof current === 'string' ? current : undefined;
 }
 
 function interpolate(template: string, params?: Record<string, string | number>): string {
@@ -44,40 +43,27 @@ function interpolate(template: string, params?: Record<string, string | number>)
   });
 }
 
-/**
- * Centralized translation hook
- * Solves Shotgun Surgery: all translations in one place
- * Usage: const { t, isAr, language } = useTranslation()
- *        t('home.welcome') or t('home.exercisesCount', {count: 5})
- */
 export function useTranslation() {
   const languageRaw = useSettingsStore((s) => s.language);
   const language = useMemo(() => normalizeLang(languageRaw), [languageRaw]);
-  const isAr = language !== "en"; // RTL for ar/eg
+  const isAr = language !== 'en';
 
-  const dict = useMemo(() => dictionaries[language] || dictionaries.eg, [language]);
+  const dict = useMemo(() => dictionaries[language] ?? dictionaries.eg, [language]);
 
   const t = useCallback(
-    (key: string, params?: Record<string, string | number>): string => {
+    (key: TranslationKey, params?: Record<string, string | number>): string => {
       const value = getNestedValue(dict, key);
-      if (value === undefined) {
-        // Fallback to English
-        const fallback = getNestedValue(dictionaries.en, key);
-        if (fallback) {
-          return interpolate(fallback, params);
-        }
-        // If key not found anywhere, return key itself for debugging
-        console.warn(`[i18n] Missing key: ${key} for lang: ${language}`);
-        return key;
-      }
-      return interpolate(value, params);
+      const fallback = value ?? getNestedValue(dictionaries.en, key);
+      if (fallback) return interpolate(fallback, params);
+      console.warn(`[i18n] Missing key: ${key} for lang: ${language}`);
+      return key;
     },
-    [dict, language]
+    [dict, language],
   );
 
   return {
     t,
-    language: languageRaw, // raw value for setLanguage compatibility
+    language: languageRaw,
     normalizedLanguage: language,
     isAr,
     isRtl: isAr,
@@ -85,14 +71,16 @@ export function useTranslation() {
   };
 }
 
-// Re-export for convenience
 export { dictionaries };
-export type { Language };
+export type { Language, TranslationKey };
 
-// Simple non-hook version for use outside React components
-export function translateKey(key: string, lang: string = "eg", params?: Record<string, string | number>): string {
+export function translateKey(
+  key: TranslationKey,
+  lang = 'eg',
+  params?: Record<string, string | number>,
+): string {
   const normalized = normalizeLang(lang);
-  const dict = dictionaries[normalized] || dictionaries.eg;
-  const value = getNestedValue(dict, key) || getNestedValue(dictionaries.en, key) || key;
+  const dict = dictionaries[normalized] ?? dictionaries.eg;
+  const value = getNestedValue(dict, key) ?? getNestedValue(dictionaries.en, key) ?? key;
   return interpolate(value, params);
 }

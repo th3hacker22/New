@@ -54,9 +54,9 @@
 - [x] إنشاء `src/db/repositories/workoutRepository.ts` — يخفي تفاصيل Dexie (كل استعلامات `where('completed').equals(1)` الـ 12 اتحولت لاستدعاءات مقصودة المعنى)
 - [x] استخراج `src/domain/` — الأنواع النقية + حسابات volume/streak/1RM/analytics (25 اختبار)
 - [x] تقسيم SettingsPage (1635→353 سطر)، FeedPage (1508→429)، NutritionPage (1115→203) لمكونات في `components/{settings,feed,nutrition}/`
-- [ ] إنشاء repositories للجداول التانية (routines, nutrition, bodyMeasurements)
-- [ ] إزالة `as any` من i18n (type-safe keys)
-- **القبول**: كل ملف صفحة < 400 سطر، لا `as any` في `src/domain/` (محقّق للـ domain)
+- [x] إنشاء repositories للجداول التانية (routines, nutrition, bodyMeasurements, exercise catalog)
+- [x] إزالة `as any` من i18n (type-safe `TranslationKey`)
+- **القبول**: كل ملف صفحة < 400 سطر، لا `as any` في `src/domain/` أو `src/i18n/`
 
 ### Phase 2 — الاختبارات (Testing)
 - [ ] Unit: domain calculations (volume, streak, getWeekKey, 1RM)
